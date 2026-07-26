@@ -352,6 +352,19 @@ static void test_upload_while_playing(void)
     expect(m, 90, 1, 0, 0);
 }
 
+static void test_upload_after_end(void)
+{
+    pff_mixer_t *m = new_mixer();
+    pff_effect_t e = rumble(100, 100, 50);
+
+    CHECK(pff_mixer_upload(m, 0, &e, 0) == PFF_OK);
+    CHECK(pff_mixer_play(m, 0, 1, 0) == PFF_OK);
+    e.strong = 300;
+    CHECK(pff_mixer_upload(m, 0, &e, 80) == PFF_OK);
+    expect(m, 80, 0, 0, 0);
+    CHECK(wait_at(m, 80) == PFF_NEVER);
+}
+
 static void test_strerror(void)
 {
     int status;
@@ -375,6 +388,7 @@ int main(void)
     test_interval();
     test_commands();
     test_upload_while_playing();
+    test_upload_after_end();
     test_strerror();
     return 0;
 }

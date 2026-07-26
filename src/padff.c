@@ -273,6 +273,7 @@ int pff_mixer_upload(pff_mixer_t *mixer, unsigned slot, const pff_effect_t *effe
         return PFF_ERR_SLOT;
     if (effect->type < PFF_RUMBLE || effect->type > PFF_RAMP)
         return PFF_ERR_EFFECT;
+    pff_slot_rebase(s, now_ms);
     s->effect = *effect;
     s->loaded = 1;
     s->start = now_ms;
