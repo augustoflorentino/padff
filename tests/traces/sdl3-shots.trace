@@ -1,0 +1,23 @@
+# recorded from SDL3 shots on Linux uinput
+0 upload 0 1 65535 32768 0 0 0 65535 0 0 0 0
+0 play 0 1
+99 upload 0 1 0 0 0 0 0 65535 0 0 0 0
+100 play 0 1
+150 upload 0 1 65535 32768 0 0 0 65535 0 0 0 0
+150 play 0 1
+250 upload 0 1 0 0 0 0 0 65535 0 0 0 0
+250 play 0 1
+300 upload 0 1 65535 32768 0 0 0 65535 0 0 0 0
+300 play 0 1
+400 upload 0 1 0 0 0 0 0 65535 0 0 0 0
+400 play 0 1
+449 upload 0 1 65535 32768 0 0 0 65535 0 0 0 0
+449 play 0 1
+550 upload 0 1 0 0 0 0 0 65535 0 0 0 0
+550 play 0 1
+599 upload 0 1 65535 32768 0 0 0 65535 0 0 0 0
+599 play 0 1
+699 upload 0 1 0 0 0 0 0 65535 0 0 0 0
+699 play 0 1
+949 play 0 0
+949 erase 0

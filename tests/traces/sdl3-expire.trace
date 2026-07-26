@@ -1,0 +1,7 @@
+# recorded from SDL3 expire on Linux uinput
+0 upload 0 1 16384 49152 0 0 0 65535 0 0 0 0
+0 play 0 1
+300 upload 0 1 0 0 0 0 0 65535 0 0 0 0
+300 play 0 1
+499 play 0 0
+499 erase 0
