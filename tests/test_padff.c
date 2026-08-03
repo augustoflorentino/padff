@@ -178,6 +178,26 @@ static void test_infinite(void)
     expect(m, 5, 1, 0, 0);
 }
 
+static void test_long_idle(void)
+{
+    pff_mixer_t *m = new_mixer();
+    pff_effect_t endless = rumble(40000, 40000, 0);
+    pff_effect_t tap = rumble(10000, 10000, 100);
+
+    endless.attack_ms = 50;
+    CHECK(pff_mixer_upload(m, 0, &endless, 0) == PFF_OK);
+    CHECK(pff_mixer_play(m, 0, 1, 0) == PFF_OK);
+    expect(m, 0, 0, 0, 0);
+    CHECK(wait_at(m, 0x80000000u) == 0x80000000u);
+    expect(m, 50, 1, 40000, 40000);
+    CHECK(wait_at(m, 50) == PFF_NEVER);
+    CHECK(pff_mixer_upload(m, 1, &tap, 0x80000010u) == PFF_OK);
+    CHECK(pff_mixer_play(m, 1, 1, 0x80000010u) == PFF_OK);
+    expect(m, 0x80000010u, 0, 40000, 40000);
+    expect(m, 0xc0000000u, 0, 40000, 40000);
+    expect(m, 0x00000005u, 0, 40000, 40000);
+}
+
 static void test_wraparound(void)
 {
     pff_mixer_t *m = new_mixer();
@@ -381,6 +401,7 @@ int main(void)
     test_rumble();
     test_repeat_and_delay();
     test_infinite();
+    test_long_idle();
     test_wraparound();
     test_levels();
     test_envelope();

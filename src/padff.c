@@ -9,6 +9,7 @@ struct pff_slot {
     pff_effect_t effect;
     uint8_t loaded;
     uint8_t playing;
+    uint8_t steady;
     uint32_t start;
     uint32_t count;
 };
@@ -117,8 +118,12 @@ static void pff_slot_sample(const struct pff_slot *s, uint32_t now, pff_sample_t
     out->wait = PFF_NEVER;
     if (!s->playing)
         return;
+    if (s->steady) {
+        pff_effect_sample(e, e->attack_ms, out);
+        return;
+    }
     if (since < 0) {
-        out->wait = (uint32_t)-since;
+        out->wait = s->start - now;
         return;
     }
     t = (uint32_t)since;
@@ -144,11 +149,10 @@ static void pff_slot_rebase(struct pff_slot *s, uint32_t now)
     uint32_t period = (uint32_t)e->delay_ms + e->length_ms;
     uint32_t reps;
 
-    if (!s->playing || since < 0)
+    if (!s->playing || s->steady || since < 0)
         return;
     if (e->length_ms == 0) {
-        if ((uint32_t)since > steady)
-            s->start = now - steady;
+        s->steady |= (uint32_t)since >= steady;
         return;
     }
     reps = (uint32_t)since / period;
@@ -276,6 +280,7 @@ int pff_mixer_upload(pff_mixer_t *mixer, unsigned slot, const pff_effect_t *effe
     pff_slot_rebase(s, now_ms);
     s->effect = *effect;
     s->loaded = 1;
+    s->steady = 0;
     s->start = now_ms;
     return PFF_OK;
 }
@@ -304,6 +309,7 @@ int pff_mixer_play(pff_mixer_t *mixer, unsigned slot, uint32_t count, uint32_t n
     if (s == NULL || !s->loaded)
         return PFF_ERR_SLOT;
     s->playing = count > 0;
+    s->steady = 0;
     s->start = now_ms;
     s->count = count;
     return PFF_OK;
