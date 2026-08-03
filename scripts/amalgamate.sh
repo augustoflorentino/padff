@@ -2,7 +2,7 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-out=${1:-$root/dist/padff.h}
+out=${1:-$root/dist/padff/padff.h}
 mkdir -p "$(dirname "$out")"
 
 {

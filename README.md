@@ -36,7 +36,7 @@ cc app.c $(pkg-config --cflags --libs padff)
 
 ## Single-file form
 
-`scripts/amalgamate.sh` writes `dist/padff.h`. Copy it into your project and, in exactly
+`scripts/amalgamate.sh` writes `dist/padff/padff.h`. Copy it into your project and, in exactly
 one `.c` file:
 
 ```c
