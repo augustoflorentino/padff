@@ -4,6 +4,19 @@ Each release lists what changed, what updating means for existing code, and ever
 
 ## Unreleased
 
+## 0.2.0 - 2026-08-05
+
+- fixed: an endless effect past its attack went silent if `pff_mixer_poll` was not called for
+  2^31 ms, which `PFF_NEVER` from `pff_mixer_next` invites
+- fixed: `pff_mixer_next` overflowed a signed negation when called 2^31 ms after a play
+- fixed: after a send with a minimum interval and nothing playing, `pff_mixer_next` now wakes
+  the caller when the interval ends instead of returning `PFF_NEVER`
+- `pff_mixer_set_interval` rejects intervals above `INT32_MAX` with `PFF_ERR_ARG`
+- README lists where the mixer differs from Linux `ff-memless`
+
+Updating: no code changes needed. Callers passing an interval above `INT32_MAX` now get
+`PFF_ERR_ARG`.
+
 ## 0.1.0 - 2026-08-03
 
 First release.
