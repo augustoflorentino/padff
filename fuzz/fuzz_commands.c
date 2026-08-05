@@ -31,11 +31,11 @@ static void fuzz_upload(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
     e.weak = (uint16_t)fuzz_take(in, 2);
     e.level = (int16_t)fuzz_take(in, 2);
     e.level_end = (int16_t)fuzz_take(in, 2);
-    e.delay_ms = (uint16_t)fuzz_take(in, 1);
+    e.delay_ms = (uint16_t)fuzz_take(in, 2);
     e.length_ms = (uint16_t)fuzz_take(in, 2);
-    e.attack_ms = (uint16_t)fuzz_take(in, 1);
+    e.attack_ms = (uint16_t)fuzz_take(in, 2);
     e.attack_level = (uint16_t)fuzz_take(in, 2);
-    e.fade_ms = (uint16_t)fuzz_take(in, 1);
+    e.fade_ms = (uint16_t)fuzz_take(in, 2);
     e.fade_level = (uint16_t)fuzz_take(in, 2);
     pff_mixer_upload(m, slot, &e, now);
 }
@@ -72,7 +72,7 @@ static uint32_t fuzz_advance(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
 
 static void fuzz_command(pff_mixer_t *m, fuzz_input_t *in, uint32_t *now)
 {
-    switch (fuzz_take(in, 1) % 9) {
+    switch (fuzz_take(in, 1) % 10) {
     case 0:
         fuzz_upload(m, in, *now);
         break;
@@ -96,6 +96,9 @@ static void fuzz_command(pff_mixer_t *m, fuzz_input_t *in, uint32_t *now)
         break;
     case 7:
         pff_mixer_stop_all(m);
+        break;
+    case 8:
+        *now += fuzz_take(in, 4);
         break;
     default:
         *now = fuzz_advance(m, in, *now);
