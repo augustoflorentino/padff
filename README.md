@@ -48,8 +48,8 @@ Define `PFF_STATIC` as well to keep every function private to that file.
 
 ## Usage
 
-See [`examples/basic.c`](examples/basic.c). The header `include/padff/padff.h` is the API
-reference.
+See [`examples/basic.c`](examples/basic.c). This README is the API reference; the header
+`include/padff/padff.h` lists the functions and types.
 
 ```c
 static unsigned char mem[PFF_MIXER_SIZE(16)];
@@ -68,7 +68,8 @@ pff_mixer_next(mixer, now_ms, &wait_ms);
 ```
 
 Upload and play on each command from the game; poll and send in the event loop, then sleep up
-to `wait_ms` (`PFF_NEVER`: until the next command).
+to `wait_ms` (`PFF_NEVER`: until the next command). While an envelope or ramp is changing,
+`wait_ms` is 1.
 
 Conventions:
 
@@ -79,7 +80,8 @@ Conventions:
   is always enough, at any alignment. There is nothing to destroy: drop the block
 - `now_ms` is any monotonic millisecond counter; it may wrap around `UINT32_MAX`. Call
   `pff_mixer_poll` at least once every 24 days
-- defaults: mix `PFF_MIX_MAX`, gain 65535, motor scale 65535, no minimum interval
+- defaults: mix `PFF_MIX_MAX`, gain 65535, motor scale 65535, no minimum interval; the
+  interval goes up to `INT32_MAX` ms
 
 Effect fields (`pff_effect_t`):
 
@@ -97,10 +99,18 @@ Effect fields (`pff_effect_t`):
 Behavior, modeled on Linux force feedback (`ff-memless`):
 
 - `pff_mixer_play(count)` plays `count` repetitions of delay plus length; `count` 0 stops
-- uploading to a slot that is playing applies the new effect at once and restarts the current
-  repetition, keeping the repetitions left; uploading to a finished slot does not restart it
+- uploading to a slot that is playing replaces the effect and restarts the current repetition
+  (its delay included), keeping the repetitions left; uploading to a finished slot does not
+  restart it
 - gain scales every effect before mixing; `PFF_MIX_SUM` clips at 65535
 - the result is scaled to `0..motor_max` with rounding to nearest
+
+Where it differs from `ff-memless`:
+
+- the default mix is the maximum of the effects; `ff-memless` sums and clips, which is
+  `PFF_MIX_SUM`
+- the attack/fade envelope also applies to rumble effects; `ff-memless` ignores it there
+- `PFF_RAMP` has no `ff-memless` counterpart
 
 From Linux `struct ff_effect`: copy `replay.delay` and `replay.length`; rumble uses
 `strong_magnitude` and `weak_magnitude`; periodic `magnitude`; constant `level`; ramp
