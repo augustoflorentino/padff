@@ -260,7 +260,7 @@ int pff_mixer_set_scale(pff_mixer_t *mixer, uint16_t motor_max)
 
 int pff_mixer_set_interval(pff_mixer_t *mixer, uint32_t interval_ms)
 {
-    if (mixer == NULL)
+    if (mixer == NULL || interval_ms > INT32_MAX)
         return PFF_ERR_ARG;
     mixer->interval = interval_ms;
     return PFF_OK;
@@ -363,7 +363,7 @@ int pff_mixer_next(const pff_mixer_t *mixer, uint32_t now_ms, uint32_t *out_wait
     if (now.strong != mixer->sent_strong || now.weak != mixer->sent_weak)
         *out_wait_ms = rate_left;
     else if (now.wait == PFF_NEVER)
-        *out_wait_ms = PFF_NEVER;
+        *out_wait_ms = rate_left > 0 ? rate_left : PFF_NEVER;
     else
         *out_wait_ms = now.wait > rate_left ? now.wait : rate_left;
     return PFF_OK;

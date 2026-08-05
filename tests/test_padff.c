@@ -317,6 +317,24 @@ static void test_interval(void)
     CHECK(wait_at(m, 21) == 19);
     expect(m, 40, 1, 0, 0);
     CHECK(pff_mixer_set_interval(NULL, 1) == PFF_ERR_ARG);
+    CHECK(pff_mixer_set_interval(m, 0x80000000u) == PFF_ERR_ARG);
+}
+
+static void test_interval_after_idle(void)
+{
+    pff_mixer_t *m = new_mixer();
+    pff_effect_t a = rumble(1000, 1000, 5);
+
+    CHECK(pff_mixer_set_interval(m, 20) == PFF_OK);
+    CHECK(pff_mixer_upload(m, 0, &a, 0) == PFF_OK);
+    CHECK(pff_mixer_play(m, 0, 1, 0) == PFF_OK);
+    expect(m, 0, 1, 1000, 1000);
+    CHECK(wait_at(m, 0) == 20);
+    CHECK(wait_at(m, 5) == 15);
+    expect(m, 20, 1, 0, 0);
+    CHECK(wait_at(m, 20) == 20);
+    expect(m, 40, 0, 0, 0);
+    CHECK(wait_at(m, 40) == PFF_NEVER);
 }
 
 static void test_commands(void)
@@ -407,6 +425,7 @@ int main(void)
     test_envelope();
     test_mix_gain_scale();
     test_interval();
+    test_interval_after_idle();
     test_commands();
     test_upload_while_playing();
     test_upload_after_end();
