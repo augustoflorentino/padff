@@ -271,6 +271,34 @@ static void test_envelope(void)
     CHECK(wait_at(m, 2010) == PFF_NEVER);
 }
 
+static void test_slow_slope_wakes(void)
+{
+    static uint64_t woken_mem[PFF_MIXER_SIZE(SLOTS) / 8 + 1];
+    pff_mixer_t *every = new_mixer();
+    pff_mixer_t *woken = NULL;
+    pff_effect_t e = level(PFF_RAMP, 0, 32767, 1000);
+    uint32_t t;
+    uint32_t next = 0;
+    unsigned wakes = 0;
+
+    CHECK(pff_mixer_init(woken_mem, sizeof(woken_mem), SLOTS, &woken) == PFF_OK);
+    CHECK(pff_mixer_set_scale(every, 255) == PFF_OK && pff_mixer_set_scale(woken, 255) == PFF_OK);
+    CHECK(pff_mixer_upload(every, 0, &e, 0) == PFF_OK && pff_mixer_upload(woken, 0, &e, 0) == PFF_OK);
+    CHECK(pff_mixer_play(every, 0, 1, 0) == PFF_OK && pff_mixer_play(woken, 0, 1, 0) == PFF_OK);
+    for (t = 0; t <= 1000; t++) {
+        poll_t p = poll_at(every, t);
+
+        if (t != next) {
+            CHECK(!p.send);
+            continue;
+        }
+        expect(woken, t, p.send, p.strong, p.weak);
+        next = t + wait_at(woken, t);
+        wakes++;
+    }
+    CHECK(wakes < 300);
+}
+
 static void test_mix_gain_scale(void)
 {
     pff_mixer_t *m = new_mixer();
@@ -423,6 +451,7 @@ int main(void)
     test_wraparound();
     test_levels();
     test_envelope();
+    test_slow_slope_wakes();
     test_mix_gain_scale();
     test_interval();
     test_interval_after_idle();

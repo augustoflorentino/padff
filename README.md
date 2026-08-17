@@ -69,7 +69,8 @@ pff_mixer_next(mixer, now_ms, &wait_ms);
 
 Upload and play on each command from the game; poll and send in the event loop, then sleep up
 to `wait_ms` (`PFF_NEVER`: until the next command). While an envelope or ramp is changing,
-`wait_ms` is 1.
+`wait_ms` is the time until the scaled output next changes, looking at most 64 ms ahead, so a
+slow ramp on a motor with few steps wakes the loop only when there is something to send.
 
 Conventions:
 

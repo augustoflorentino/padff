@@ -4,6 +4,7 @@
 
 #define PFF_FULL 65535u
 #define PFF_ALIGN 8u
+#define PFF_SLOPE_SCAN 64u
 
 struct pff_slot {
     pff_effect_t effect;
@@ -351,6 +352,19 @@ int pff_mixer_poll(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_strong, ui
     return PFF_OK;
 }
 
+static uint32_t pff_slope_wait(const pff_mixer_t *m, uint32_t now, const pff_sample_t *at)
+{
+    pff_sample_t later;
+    uint32_t k;
+
+    for (k = 1; k < PFF_SLOPE_SCAN; k++) {
+        pff_mixer_sample(m, now + k, &later);
+        if (later.strong != at->strong || later.weak != at->weak || later.wait != 1)
+            return k;
+    }
+    return k;
+}
+
 int pff_mixer_next(const pff_mixer_t *mixer, uint32_t now_ms, uint32_t *out_wait_ms)
 {
     pff_sample_t now;
@@ -360,6 +374,8 @@ int pff_mixer_next(const pff_mixer_t *mixer, uint32_t now_ms, uint32_t *out_wait
         return PFF_ERR_ARG;
     pff_mixer_sample(mixer, now_ms, &now);
     rate_left = pff_rate_left(mixer, now_ms);
+    if (now.wait == 1)
+        now.wait = pff_slope_wait(mixer, now_ms, &now);
     if (now.strong != mixer->sent_strong || now.weak != mixer->sent_weak)
         *out_wait_ms = rate_left;
     else if (now.wait == PFF_NEVER)
