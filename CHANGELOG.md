@@ -4,6 +4,14 @@ Each release lists what changed, what updating means for existing code, and ever
 
 ## Unreleased
 
+## 0.6.0 - 2026-08-17
+
+- `pff_mixer_next` during an envelope or ramp returns the time until the scaled output next
+  changes (looking up to 64 ms ahead) instead of 1, so slow slopes on motors with few steps
+  wake the loop far less often; no change is missed
+
+Updating: no code changes needed.
+
 ## 0.2.0 - 2026-08-05
 
 - fixed: an endless effect past its attack went silent if `pff_mixer_poll` was not called for
