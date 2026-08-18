@@ -1,4 +1,11 @@
-# padff
+<h1 align="center">padff</h1>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/mix-dark.svg">
+    <img src="docs/images/mix-light.svg" alt="Motor intensities over two seconds: an engine effect with attack and fade on the weak motor, and a hit played twice mixed on top" width="760">
+  </picture>
+</p>
 
 Force feedback mixer: turns the vibration effects a game asks for into intensities for the two
 motors of a gamepad.
