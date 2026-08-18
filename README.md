@@ -55,7 +55,9 @@ Define `PFF_STATIC` as well to keep every function private to that file.
 
 ## Usage
 
-See [`examples/basic.c`](examples/basic.c). This README is the API reference; the header
+See [`examples/basic.c`](examples/basic.c), and [`examples/ff_replay.c`](examples/ff_replay.c)
+for a Linux-style sequence of `EVIOCSFF`, `EV_FF` play and stop, `FF_GAIN` and `EVIOCRMFF`
+commands. This README is the API reference; the header
 `include/padff/padff.h` lists the functions and types.
 
 ```c
@@ -79,13 +81,20 @@ to `wait_ms` (`PFF_NEVER`: until the next command). While an envelope or ramp is
 `wait_ms` is the time until the scaled output next changes, looking at most 64 ms ahead, so a
 slow ramp on a motor with few steps wakes the loop only when there is something to send.
 
+`pff_mixer_stop` stops one slot and `pff_mixer_stop_all` every slot; the effects stay uploaded.
+`pff_mixer_playing` tells whether a slot is still playing at `now_ms` (inside its delay counts
+as playing; after its last repetition it does not), for answering a game that asks.
+
 Conventions:
 
 - every function that can fail returns `PFF_OK` or an error code; `pff_strerror` describes it:
   `PFF_ERR_ARG` (null pointer, bad option), `PFF_ERR_SPACE` (memory block too small),
   `PFF_ERR_SLOT` (slot out of range, or play on an empty slot), `PFF_ERR_EFFECT` (unknown type)
 - the mixer lives inside the memory block given to `pff_mixer_init`; `PFF_MIXER_SIZE(slots)`
-  is always enough, at any alignment. There is nothing to destroy: drop the block
+  is always enough, at any alignment. There is nothing to destroy: drop the block. While the
+  mixer lives, touch the block only through padff: reading or writing it through other types
+  breaks C aliasing rules. To reuse the block, stop using the mixer and call `pff_mixer_init`
+  again
 - `now_ms` is any monotonic millisecond counter; it may wrap around `UINT32_MAX`. Call
   `pff_mixer_poll` at least once every 24 days
 - defaults: mix `PFF_MIX_MAX`, gain 65535, motor scale 65535, no minimum interval; the

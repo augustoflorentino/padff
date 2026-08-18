@@ -71,6 +71,8 @@ endif()
 if(PADFF_BUILD_EXAMPLES)
     add_executable(padff_basic examples/basic.c)
     target_link_libraries(padff_basic PRIVATE padff)
+    add_executable(padff_ff_replay examples/ff_replay.c)
+    target_link_libraries(padff_ff_replay PRIVATE padff)
 endif()
 
 if(PADFF_BUILD_FUZZ)
