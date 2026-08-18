@@ -41,6 +41,7 @@ extern "C" {
 #define PFF_MIXER_SIZE(slots) (64 + (size_t)(slots) * 48)
 
 typedef struct pff_effect {
+    uint16_t size;
     uint16_t type;
     uint16_t strong;
     uint16_t weak;

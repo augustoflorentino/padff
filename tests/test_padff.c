@@ -63,6 +63,7 @@ static pff_effect_t rumble(uint16_t strong, uint16_t weak, uint16_t length_ms)
     pff_effect_t e;
 
     memset(&e, 0, sizeof(e));
+    e.size = sizeof(e);
     e.type = PFF_RUMBLE;
     e.strong = strong;
     e.weak = weak;
@@ -75,6 +76,7 @@ static pff_effect_t level(uint16_t type, int16_t start, int16_t end, uint16_t le
     pff_effect_t e;
 
     memset(&e, 0, sizeof(e));
+    e.size = sizeof(e);
     e.type = type;
     e.level = start;
     e.level_end = end;
@@ -379,6 +381,11 @@ static void test_commands(void)
     CHECK(pff_mixer_upload(m, 0, &bad, 0) == PFF_ERR_EFFECT);
     bad.type = PFF_RAMP + 1;
     CHECK(pff_mixer_upload(m, 0, &bad, 0) == PFF_ERR_EFFECT);
+    bad.type = PFF_RUMBLE;
+    bad.size = 22;
+    CHECK(pff_mixer_upload(m, 0, &bad, 0) == PFF_ERR_ARG);
+    bad.size = 0;
+    CHECK(pff_mixer_upload(m, 0, &bad, 0) == PFF_ERR_ARG);
     CHECK(pff_mixer_upload(m, SLOTS, &e, 0) == PFF_ERR_SLOT);
     CHECK(pff_mixer_upload(m, 0, NULL, 0) == PFF_ERR_ARG);
     CHECK(pff_mixer_upload(NULL, 0, &e, 0) == PFF_ERR_ARG);

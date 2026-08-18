@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(padff VERSION 0.6.0 DESCRIPTION "Force feedback mixer: game rumble effects to two motor intensities" LANGUAGES C)
+project(padff VERSION 1.0.0 DESCRIPTION "Force feedback mixer: game rumble effects to two motor intensities" LANGUAGES C)
 
 option(PADFF_BUILD_TESTS "Build tests" OFF)
 option(PADFF_BUILD_EXAMPLES "Build examples" OFF)

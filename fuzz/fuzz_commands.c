@@ -26,6 +26,7 @@ static void fuzz_upload(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
     pff_effect_t e;
     unsigned slot = fuzz_take(in, 1) % (FUZZ_SLOTS + 1);
 
+    e.size = fuzz_take(in, 1) == 0 ? 0 : sizeof(e);
     e.type = (uint16_t)(fuzz_take(in, 1) % 6);
     e.strong = (uint16_t)fuzz_take(in, 2);
     e.weak = (uint16_t)fuzz_take(in, 2);

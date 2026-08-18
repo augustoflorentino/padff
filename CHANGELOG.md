@@ -4,6 +4,24 @@ Each release lists what changed, what updating means for existing code, and ever
 
 ## Unreleased
 
+## 1.0.0 - 2026-08-17
+
+- breaking: `pff_effect_t` starts with `uint16_t size`, which callers set to
+  `sizeof(pff_effect_t)`; `pff_mixer_upload` rejects any other value with `PFF_ERR_ARG`. Later
+  versions add fields only at the end and keep accepting older sizes
+- the struct is 24 bytes with a fixed layout: size, type, strong, weak, level, level_end,
+  delay_ms, length_ms, attack_ms, attack_level, fade_ms, fade_level; vpad 1.x `vpad_effect_t`
+  uses the same layout, so a vpad effect can be copied into a `pff_effect_t` with `memcpy`
+- SONAME is now `libpadff.so.1`
+
+Upgrading from 0.x:
+
+- set `effect.size = sizeof(effect)` before every `pff_mixer_upload`; zero-initialized effects
+  without it now fail with `PFF_ERR_ARG`
+- code copying `struct ff_effect` fields by name needs only the `size` line
+- code that `memcpy`s from vpad needs vpad 1.0 or later (vpad 0.x effects have no `size`)
+- relink: the ABI changed
+
 ## 0.6.0 - 2026-08-17
 
 - `pff_mixer_next` during an envelope or ramp returns the time until the scaled output next

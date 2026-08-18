@@ -14,6 +14,7 @@ int main(void)
     int status;
 
     memset(&effect, 0, sizeof(effect));
+    effect.size = sizeof(effect);
     effect.type = PFF_RUMBLE;
     effect.strong = 65535;
     status = pff_mixer_init(mem, sizeof(mem), 1, &mixer);

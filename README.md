@@ -88,6 +88,7 @@ Effect fields (`pff_effect_t`):
 
 | field | meaning |
 | --- | --- |
+| `size` | `sizeof(pff_effect_t)`; upload rejects any other value with `PFF_ERR_ARG` |
 | `type` | `PFF_RUMBLE`, `PFF_PERIODIC`, `PFF_CONSTANT` or `PFF_RAMP` |
 | `strong`, `weak` | rumble: motor intensities, 0 to 65535 |
 | `level` | periodic magnitude, constant level, ramp start: -32768 to 32767, intensity is `2 * abs(level)` |

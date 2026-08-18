@@ -111,6 +111,7 @@ static void apply(pff_mixer_t *m, const event_t *ev, uint32_t now)
     pff_effect_t e;
 
     if (strcmp(ev->op, "upload") == 0) {
+        e.size = sizeof(e);
         e.type = (uint16_t)a[1];
         e.strong = (uint16_t)a[2];
         e.weak = (uint16_t)a[3];

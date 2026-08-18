@@ -34,7 +34,7 @@ typedef struct {
     uint32_t wait;
 } pff_sample_t;
 
-typedef char pff_effect_size_check[sizeof(pff_effect_t) == 22 ? 1 : -1];
+typedef char pff_effect_size_check[sizeof(pff_effect_t) == 24 && offsetof(pff_effect_t, size) == 0 ? 1 : -1];
 typedef char pff_slot_size_check[sizeof(struct pff_slot) <= 48 ? 1 : -1];
 typedef char pff_head_size_check[offsetof(struct pff_mixer, slot) + PFF_ALIGN - 1 <= 64 ? 1 : -1];
 
@@ -271,7 +271,7 @@ int pff_mixer_upload(pff_mixer_t *mixer, unsigned slot, const pff_effect_t *effe
 {
     struct pff_slot *s;
 
-    if (mixer == NULL || effect == NULL)
+    if (mixer == NULL || effect == NULL || effect->size != sizeof(pff_effect_t))
         return PFF_ERR_ARG;
     s = pff_get_slot(mixer, slot);
     if (s == NULL)

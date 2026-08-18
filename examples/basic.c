@@ -16,10 +16,12 @@ int main(void)
     int send;
 
     memset(&hit, 0, sizeof(hit));
+    hit.size = sizeof(hit);
     hit.type = PFF_RUMBLE;
     hit.strong = 60000;
     hit.length_ms = 150;
     memset(&engine, 0, sizeof(engine));
+    engine.size = sizeof(engine);
     engine.type = PFF_RUMBLE;
     engine.weak = 20000;
     engine.length_ms = 400;
