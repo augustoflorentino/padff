@@ -65,7 +65,9 @@ PFF_API int pff_mixer_set_interval(pff_mixer_t *mixer, uint32_t interval_ms);
 PFF_API int pff_mixer_upload(pff_mixer_t *mixer, unsigned slot, const pff_effect_t *effect, uint32_t now_ms);
 PFF_API int pff_mixer_erase(pff_mixer_t *mixer, unsigned slot);
 PFF_API int pff_mixer_play(pff_mixer_t *mixer, unsigned slot, uint32_t count, uint32_t now_ms);
+PFF_API int pff_mixer_stop(pff_mixer_t *mixer, unsigned slot);
 PFF_API int pff_mixer_stop_all(pff_mixer_t *mixer);
+PFF_API int pff_mixer_playing(const pff_mixer_t *mixer, unsigned slot, uint32_t now_ms, int *out_playing);
 PFF_API int pff_mixer_poll(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_strong, uint16_t *out_weak,
                            int *out_send);
 PFF_API int pff_mixer_next(const pff_mixer_t *mixer, uint32_t now_ms, uint32_t *out_wait_ms);

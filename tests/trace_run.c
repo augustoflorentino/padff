@@ -130,6 +130,8 @@ static void apply(pff_mixer_t *m, const event_t *ev, uint32_t now)
         pff_mixer_erase(m, (unsigned)a[0]);
     } else if (strcmp(ev->op, "gain") == 0) {
         pff_mixer_set_gain(m, (uint16_t)a[0]);
+    } else if (strcmp(ev->op, "halt") == 0) {
+        pff_mixer_stop(m, (unsigned)a[0]);
     } else if (strcmp(ev->op, "stop") == 0) {
         pff_mixer_stop_all(m);
     }

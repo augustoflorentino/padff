@@ -316,6 +316,42 @@ int pff_mixer_play(pff_mixer_t *mixer, unsigned slot, uint32_t count, uint32_t n
     return PFF_OK;
 }
 
+int pff_mixer_stop(pff_mixer_t *mixer, unsigned slot)
+{
+    struct pff_slot *s;
+
+    if (mixer == NULL)
+        return PFF_ERR_ARG;
+    s = pff_get_slot(mixer, slot);
+    if (s == NULL)
+        return PFF_ERR_SLOT;
+    s->playing = 0;
+    return PFF_OK;
+}
+
+static int pff_slot_active(const struct pff_slot *s, uint32_t now)
+{
+    const pff_effect_t *e = &s->effect;
+    int32_t since = (int32_t)(now - s->start);
+    uint32_t period = (uint32_t)e->delay_ms + e->length_ms;
+
+    if (!s->playing)
+        return 0;
+    if (s->steady || since < 0 || e->length_ms == 0)
+        return 1;
+    return (uint32_t)since / period < s->count;
+}
+
+int pff_mixer_playing(const pff_mixer_t *mixer, unsigned slot, uint32_t now_ms, int *out_playing)
+{
+    if (mixer == NULL || out_playing == NULL)
+        return PFF_ERR_ARG;
+    if (slot >= mixer->slots)
+        return PFF_ERR_SLOT;
+    *out_playing = pff_slot_active(&mixer->slot[slot], now_ms);
+    return PFF_OK;
+}
+
 int pff_mixer_stop_all(pff_mixer_t *mixer)
 {
     unsigned i;

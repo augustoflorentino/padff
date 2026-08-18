@@ -117,6 +117,8 @@ def simulate(text):
             elif op == 'erase' and 0 <= a[0] < 16:
                 slots[a[0]].effect = None
                 slots[a[0]].playing = False
+            elif op == 'halt' and 0 <= a[0] < 16:
+                slots[a[0]].playing = False
             elif op == 'gain':
                 gain = a[0]
             elif op == 'stop':
@@ -153,8 +155,10 @@ def random_trace(rng):
             lines.append('%d upload %d %s' % (t, slot, ' '.join(map(str, fields))))
         elif op < 0.75:
             lines.append('%d play %d %d' % (t, slot, rng.choice([0, 1, 1, 2, 3, 5])))
-        elif op < 0.85:
+        elif op < 0.8:
             lines.append('%d erase %d' % (t, slot))
+        elif op < 0.85:
+            lines.append('%d halt %d' % (t, slot))
         elif op < 0.95:
             lines.append('%d gain %d' % (t, rng.randint(0, FULL)))
         else:

@@ -301,6 +301,42 @@ static void test_slow_slope_wakes(void)
     CHECK(wakes < 300);
 }
 
+static int playing_at(const pff_mixer_t *m, unsigned slot, uint32_t now)
+{
+    int playing = -1;
+
+    CHECK(pff_mixer_playing(m, slot, now, &playing) == PFF_OK);
+    return playing;
+}
+
+static void test_stop_and_playing(void)
+{
+    pff_mixer_t *m = new_mixer();
+    pff_effect_t a = rumble(1000, 1000, 50);
+    pff_effect_t b = rumble(2000, 2000, 0);
+
+    a.delay_ms = 10;
+    CHECK(pff_mixer_upload(m, 0, &a, 0) == PFF_OK);
+    CHECK(pff_mixer_upload(m, 1, &b, 0) == PFF_OK);
+    CHECK(playing_at(m, 0, 0) == 0);
+    CHECK(pff_mixer_play(m, 0, 2, 0) == PFF_OK);
+    CHECK(pff_mixer_play(m, 1, 1, 0) == PFF_OK);
+    CHECK(playing_at(m, 0, 5) == 1);
+    CHECK(playing_at(m, 0, 119) == 1);
+    CHECK(playing_at(m, 0, 120) == 0);
+    CHECK(playing_at(m, 1, 100000) == 1);
+    expect(m, 0, 1, 2000, 2000);
+    CHECK(pff_mixer_stop(m, 1) == PFF_OK);
+    CHECK(playing_at(m, 1, 20) == 0);
+    expect(m, 20, 1, 1000, 1000);
+    CHECK(pff_mixer_stop(m, SLOTS) == PFF_ERR_SLOT);
+    CHECK(pff_mixer_stop(NULL, 0) == PFF_ERR_ARG);
+    CHECK(pff_mixer_playing(m, SLOTS, 0, &(int){0}) == PFF_ERR_SLOT);
+    CHECK(pff_mixer_playing(m, 0, 0, NULL) == PFF_ERR_ARG);
+    CHECK(pff_mixer_play(m, 1, 1, 30) == PFF_OK);
+    CHECK(playing_at(m, 1, 30) == 1);
+}
+
 static void test_mix_gain_scale(void)
 {
     pff_mixer_t *m = new_mixer();
@@ -459,6 +495,7 @@ int main(void)
     test_levels();
     test_envelope();
     test_slow_slope_wakes();
+    test_stop_and_playing();
     test_mix_gain_scale();
     test_interval();
     test_interval_after_idle();

@@ -54,6 +54,20 @@ static void fuzz_check_quiet(pff_mixer_t *m, uint32_t now, uint32_t until)
     }
 }
 
+static void fuzz_check_idle(const pff_mixer_t *m, uint32_t now, uint16_t strong, uint16_t weak, int send)
+{
+    unsigned i;
+    int playing = 0;
+    int any = 0;
+
+    for (i = 0; i < FUZZ_SLOTS; i++) {
+        pff_mixer_playing(m, i, now, &playing);
+        any |= playing;
+    }
+    if (send && !any && (strong != 0 || weak != 0))
+        abort();
+}
+
 static uint32_t fuzz_advance(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
 {
     uint32_t step = fuzz_take(in, 1);
@@ -63,6 +77,7 @@ static uint32_t fuzz_advance(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
     int send;
 
     pff_mixer_poll(m, now, &strong, &weak, &send);
+    fuzz_check_idle(m, now, strong, weak, send);
     pff_mixer_next(m, now, &wait);
     if (wait > 0 && wait != PFF_NEVER)
         fuzz_check_quiet(m, now, now + (wait < step ? wait : step));
@@ -96,7 +111,10 @@ static void fuzz_command(pff_mixer_t *m, fuzz_input_t *in, uint32_t *now)
         pff_mixer_set_interval(m, fuzz_take(in, 1) % 32);
         break;
     case 7:
-        pff_mixer_stop_all(m);
+        if (fuzz_take(in, 1) % 2)
+            pff_mixer_stop_all(m);
+        else
+            pff_mixer_stop(m, fuzz_take(in, 1) % (FUZZ_SLOTS + 1));
         break;
     case 8:
         *now += fuzz_take(in, 4);
