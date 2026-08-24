@@ -4,6 +4,17 @@ Each release lists what changed, what updating means for existing code, and ever
 
 ## Unreleased
 
+## 1.5.0 - 2026-08-24
+
+- added: `pff_mixer_stop` stops one slot, keeping its effect uploaded
+- added: `pff_mixer_playing` tells whether a slot is still playing at a given time
+- added: `examples/ff_replay.c`, a Linux-style command sequence (upload, play, stop, gain, erase)
+- README: the memory block must be accessed only through padff while the mixer lives
+- tests: the reference model and the random traces cover single-slot stops; the fuzz target
+  checks that nothing plays when no slot is playing
+
+Updating: no code changes needed.
+
 ## 1.0.0 - 2026-08-17
 
 - breaking: `pff_effect_t` starts with `uint16_t size`, which callers set to
