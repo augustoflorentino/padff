@@ -1,0 +1,37 @@
+name: Bug
+description: The motors get the wrong values, or at the wrong time
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A sequence of commands with times is the fastest way to a fix. The format of
+        `tests/traces/*.trace` works, and so does a short C program.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: 3.6.0
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Mixer config
+      description: mix, motor_max, interval_ms, motors, trigger_max
+      render: c
+  - type: textarea
+    id: commands
+    attributes:
+      label: Commands
+      description: Uploads, plays, stops and gain changes, each with its time in ms
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Expected and actual motor values
+      render: text
+    validations:
+      required: true

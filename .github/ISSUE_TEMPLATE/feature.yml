@@ -1,0 +1,15 @@
+name: Idea
+description: An effect type, a mixing rule or a device padff does not handle
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What the game or the device does
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference behaviour
+      description: How ff-memless, SDL or the device firmware handles it, if you know
