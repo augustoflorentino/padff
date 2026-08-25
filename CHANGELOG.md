@@ -4,6 +4,41 @@ Each release lists what changed, what updating means for existing code, and ever
 
 ## Unreleased
 
+## 2.0.0 - 2026-08-24
+
+- breaking: `pff_mixer_init` takes a `const pff_config_t *` (mix, motor scale, minimum
+  interval); `pff_mixer_configure` changes it later. `pff_mixer_set_mix`,
+  `pff_mixer_set_scale` and `pff_mixer_set_interval` are gone
+- why: the three setters left a window after init where the mixer ran with defaults that did
+  not match the device, each failed on its own (a bad scale after a good mix left a half
+  applied setup), and every new setting needed a new exported function. The config is checked
+  as a whole before anything is applied, and its `size` field lets later versions add settings
+  without breaking callers
+- `pff_mixer_set_gain` stays: gain is a runtime command from the game (`FF_GAIN`), not a
+  device setting
+- a motor scale of 0 in the config means 65535, so a zeroed config with `size` set gives the
+  defaults
+- SONAME is now `libpadff.so.2`
+
+Upgrading from 1.x:
+
+```c
+/* 1.x */
+pff_mixer_init(mem, sizeof(mem), slots, &mixer);
+pff_mixer_set_mix(mixer, PFF_MIX_SUM);
+pff_mixer_set_scale(mixer, 255);
+pff_mixer_set_interval(mixer, 8);
+
+/* 2.0 */
+pff_config_t config = {sizeof(config), PFF_MIX_SUM, 255, 8};
+pff_mixer_init(mem, sizeof(mem), slots, &config, &mixer);
+```
+
+- pass `NULL` as the config to keep the defaults
+- to change a setting at runtime, fill the whole config and call `pff_mixer_configure`
+- `pff_effect_t` is unchanged; vpad 1.x effects still copy in with `memcpy`
+- relink: the ABI changed
+
 ## 1.5.0 - 2026-08-24
 
 - added: `pff_mixer_stop` stops one slot, keeping its effect uploaded
