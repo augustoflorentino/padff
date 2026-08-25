@@ -211,7 +211,24 @@ static struct pff_slot *pff_get_slot(pff_mixer_t *m, unsigned slot)
     return &m->slot[slot];
 }
 
-int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, pff_mixer_t **out_mixer)
+static int pff_config_check(const pff_config_t *c)
+{
+    if (c->size != sizeof(pff_config_t))
+        return 0;
+    if (c->mix != PFF_MIX_MAX && c->mix != PFF_MIX_SUM)
+        return 0;
+    return c->motor_max <= PFF_FULL && c->interval_ms <= INT32_MAX;
+}
+
+static void pff_config_apply(pff_mixer_t *m, const pff_config_t *c)
+{
+    m->mix = (int)c->mix;
+    m->motor_max = (uint16_t)(c->motor_max == 0 ? PFF_FULL : c->motor_max);
+    m->interval = c->interval_ms;
+}
+
+int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, const pff_config_t *config,
+                   pff_mixer_t **out_mixer)
 {
     uintptr_t addr = (uintptr_t)mem;
     size_t pad = (size_t)((PFF_ALIGN - addr % PFF_ALIGN) % PFF_ALIGN);
@@ -223,6 +240,8 @@ int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, pff_mixer_t **out_
     *out_mixer = NULL;
     if (mem == NULL || slots == 0 || slots > PFF_MAX_SLOTS)
         return PFF_ERR_ARG;
+    if (config != NULL && !pff_config_check(config))
+        return PFF_ERR_ARG;
     if (mem_len < pad || mem_len - pad < need)
         return PFF_ERR_SPACE;
     m = (pff_mixer_t *)(void *)((unsigned char *)mem + pad);
@@ -231,15 +250,17 @@ int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, pff_mixer_t **out_
     m->mix = PFF_MIX_MAX;
     m->gain = PFF_FULL;
     m->motor_max = PFF_FULL;
+    if (config != NULL)
+        pff_config_apply(m, config);
     *out_mixer = m;
     return PFF_OK;
 }
 
-int pff_mixer_set_mix(pff_mixer_t *mixer, int mix)
+int pff_mixer_configure(pff_mixer_t *mixer, const pff_config_t *config)
 {
-    if (mixer == NULL || (mix != PFF_MIX_MAX && mix != PFF_MIX_SUM))
+    if (mixer == NULL || config == NULL || !pff_config_check(config))
         return PFF_ERR_ARG;
-    mixer->mix = mix;
+    pff_config_apply(mixer, config);
     return PFF_OK;
 }
 
@@ -248,22 +269,6 @@ int pff_mixer_set_gain(pff_mixer_t *mixer, uint16_t gain)
     if (mixer == NULL)
         return PFF_ERR_ARG;
     mixer->gain = gain;
-    return PFF_OK;
-}
-
-int pff_mixer_set_scale(pff_mixer_t *mixer, uint16_t motor_max)
-{
-    if (mixer == NULL || motor_max == 0)
-        return PFF_ERR_ARG;
-    mixer->motor_max = motor_max;
-    return PFF_OK;
-}
-
-int pff_mixer_set_interval(pff_mixer_t *mixer, uint32_t interval_ms)
-{
-    if (mixer == NULL || interval_ms > INT32_MAX)
-        return PFF_ERR_ARG;
-    mixer->interval = interval_ms;
     return PFF_OK;
 }
 

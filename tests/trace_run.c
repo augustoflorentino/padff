@@ -161,14 +161,16 @@ static void run(uint32_t base, int sleep)
 {
     static unsigned char mem[PFF_MIXER_SIZE(TRACE_SLOTS)];
     pff_mixer_t *m = NULL;
+    pff_config_t config;
     size_t next_ev = 0;
     uint32_t t = 0;
 
     got.count = 0;
-    pff_mixer_init(mem, sizeof(mem), TRACE_SLOTS, &m);
-    pff_mixer_set_mix(m, trace.mix);
-    pff_mixer_set_scale(m, trace.scale);
-    pff_mixer_set_interval(m, trace.interval);
+    config.size = sizeof(config);
+    config.mix = (uint32_t)trace.mix;
+    config.motor_max = (uint32_t)trace.scale;
+    config.interval_ms = (uint32_t)trace.interval;
+    pff_mixer_init(mem, sizeof(mem), TRACE_SLOTS, &config, &m);
     while (t <= trace.end) {
         uint32_t wait;
 

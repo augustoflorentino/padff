@@ -59,6 +59,7 @@ int main(void)
     static unsigned char mem[PFF_MIXER_SIZE(4)];
     const size_t count = sizeof(commands) / sizeof(commands[0]);
     pff_mixer_t *mixer = NULL;
+    pff_config_t config;
     uint32_t now = 0;
     uint32_t wait = 0;
     size_t next = 0;
@@ -66,9 +67,11 @@ int main(void)
     uint16_t weak;
     int send;
 
-    if (pff_mixer_init(mem, sizeof(mem), 4, &mixer) != PFF_OK)
+    memset(&config, 0, sizeof(config));
+    config.size = sizeof(config);
+    config.mix = PFF_MIX_SUM;
+    if (pff_mixer_init(mem, sizeof(mem), 4, &config, &mixer) != PFF_OK)
         return 1;
-    pff_mixer_set_mix(mixer, PFF_MIX_SUM);
     while (next < count || wait != PFF_NEVER) {
         while (next < count && commands[next].ms <= now)
             apply(mixer, &commands[next++]);

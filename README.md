@@ -64,8 +64,9 @@ commands. This README is the API reference; the header
 static unsigned char mem[PFF_MIXER_SIZE(16)];
 pff_mixer_t *mixer;
 
-pff_mixer_init(mem, sizeof(mem), 16, &mixer);
-pff_mixer_set_scale(mixer, 255);
+pff_config_t config = {sizeof(config), PFF_MIX_MAX, 255, 0};
+
+pff_mixer_init(mem, sizeof(mem), 16, &config, &mixer);
 
 pff_mixer_upload(mixer, id, &effect, now_ms);
 pff_mixer_play(mixer, id, count, now_ms);
@@ -97,8 +98,12 @@ Conventions:
   again
 - `now_ms` is any monotonic millisecond counter; it may wrap around `UINT32_MAX`. Call
   `pff_mixer_poll` at least once every 24 days
-- defaults: mix `PFF_MIX_MAX`, gain 65535, motor scale 65535, no minimum interval; the
-  interval goes up to `INT32_MAX` ms
+- `pff_config_t` sets the mixer up, at `pff_mixer_init` or later with `pff_mixer_configure`;
+  every field is checked before any is applied. `size` is `sizeof(pff_config_t)`; `mix` is
+  `PFF_MIX_MAX` or `PFF_MIX_SUM`; `motor_max` is the motor scale, 1 to 65535, 0 meaning 65535;
+  `interval_ms` is the minimum time between sends, up to `INT32_MAX`. A zeroed config with its
+  size set, or `NULL` at init, gives the defaults: maximum mix, full scale, no interval
+- `pff_mixer_set_gain` changes the global gain (65535 by default), as `FF_GAIN` does
 
 Effect fields (`pff_effect_t`):
 

@@ -41,6 +41,17 @@ static void fuzz_upload(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
     pff_mixer_upload(m, slot, &e, now);
 }
 
+static void fuzz_configure(pff_mixer_t *m, fuzz_input_t *in)
+{
+    pff_config_t c;
+
+    c.size = fuzz_take(in, 1) == 0 ? 0 : sizeof(c);
+    c.mix = fuzz_take(in, 1) % 3;
+    c.motor_max = fuzz_take(in, 3) % 0x10002;
+    c.interval_ms = fuzz_take(in, 1) % 32;
+    pff_mixer_configure(m, &c);
+}
+
 static void fuzz_check_quiet(pff_mixer_t *m, uint32_t now, uint32_t until)
 {
     uint16_t strong;
@@ -102,13 +113,9 @@ static void fuzz_command(pff_mixer_t *m, fuzz_input_t *in, uint32_t *now)
         pff_mixer_set_gain(m, (uint16_t)fuzz_take(in, 2));
         break;
     case 4:
-        pff_mixer_set_mix(m, (int)(fuzz_take(in, 1) % 3));
-        break;
     case 5:
-        pff_mixer_set_scale(m, (uint16_t)fuzz_take(in, 2));
-        break;
     case 6:
-        pff_mixer_set_interval(m, fuzz_take(in, 1) % 32);
+        fuzz_configure(m, in);
         break;
     case 7:
         if (fuzz_take(in, 1) % 2)
@@ -131,7 +138,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     fuzz_input_t in = {data, size};
     uint32_t now = fuzz_take(&in, 4);
 
-    if (pff_mixer_init(mem, sizeof(mem), FUZZ_SLOTS, &m) != PFF_OK)
+    if (pff_mixer_init(mem, sizeof(mem), FUZZ_SLOTS, NULL, &m) != PFF_OK)
         abort();
     while (in.size > 0)
         fuzz_command(m, &in, &now);

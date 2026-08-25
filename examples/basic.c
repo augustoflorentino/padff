@@ -7,6 +7,7 @@ int main(void)
 {
     static unsigned char mem[PFF_MIXER_SIZE(2)];
     pff_mixer_t *mixer = NULL;
+    pff_config_t config;
     pff_effect_t hit;
     pff_effect_t engine;
     uint32_t now = 0;
@@ -27,9 +28,11 @@ int main(void)
     engine.length_ms = 400;
     engine.attack_ms = 100;
 
-    if (pff_mixer_init(mem, sizeof(mem), 2, &mixer) != PFF_OK)
+    memset(&config, 0, sizeof(config));
+    config.size = sizeof(config);
+    config.motor_max = 255;
+    if (pff_mixer_init(mem, sizeof(mem), 2, &config, &mixer) != PFF_OK)
         return 1;
-    pff_mixer_set_scale(mixer, 255);
     pff_mixer_upload(mixer, 0, &hit, now);
     pff_mixer_upload(mixer, 1, &engine, now);
     pff_mixer_play(mixer, 0, 2, now);

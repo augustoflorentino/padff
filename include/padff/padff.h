@@ -55,13 +55,19 @@ typedef struct pff_effect {
     uint16_t fade_level;
 } pff_effect_t;
 
+typedef struct pff_config {
+    uint32_t size;
+    uint32_t mix;
+    uint32_t motor_max;
+    uint32_t interval_ms;
+} pff_config_t;
+
 typedef struct pff_mixer pff_mixer_t;
 
-PFF_API int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, pff_mixer_t **out_mixer);
-PFF_API int pff_mixer_set_mix(pff_mixer_t *mixer, int mix);
+PFF_API int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, const pff_config_t *config,
+                           pff_mixer_t **out_mixer);
+PFF_API int pff_mixer_configure(pff_mixer_t *mixer, const pff_config_t *config);
 PFF_API int pff_mixer_set_gain(pff_mixer_t *mixer, uint16_t gain);
-PFF_API int pff_mixer_set_scale(pff_mixer_t *mixer, uint16_t motor_max);
-PFF_API int pff_mixer_set_interval(pff_mixer_t *mixer, uint32_t interval_ms);
 PFF_API int pff_mixer_upload(pff_mixer_t *mixer, unsigned slot, const pff_effect_t *effect, uint32_t now_ms);
 PFF_API int pff_mixer_erase(pff_mixer_t *mixer, unsigned slot);
 PFF_API int pff_mixer_play(pff_mixer_t *mixer, unsigned slot, uint32_t count, uint32_t now_ms);

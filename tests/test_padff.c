@@ -22,11 +22,22 @@ typedef struct {
     int send;
 } poll_t;
 
+static int configure(pff_mixer_t *m, uint32_t mix, uint32_t motor_max, uint32_t interval_ms)
+{
+    pff_config_t c;
+
+    c.size = sizeof(c);
+    c.mix = mix;
+    c.motor_max = motor_max;
+    c.interval_ms = interval_ms;
+    return pff_mixer_configure(m, &c);
+}
+
 static pff_mixer_t *new_mixer(void)
 {
     pff_mixer_t *m = NULL;
 
-    CHECK(pff_mixer_init(mem, sizeof(mem), SLOTS, &m) == PFF_OK);
+    CHECK(pff_mixer_init(mem, sizeof(mem), SLOTS, NULL, &m) == PFF_OK);
     CHECK(m != NULL);
     return m;
 }
@@ -90,15 +101,15 @@ static void test_init(void)
     pff_mixer_t *m = NULL;
     size_t shift;
 
-    CHECK(pff_mixer_init(mem, sizeof(mem), 0, &m) == PFF_ERR_ARG);
+    CHECK(pff_mixer_init(mem, sizeof(mem), 0, NULL, &m) == PFF_ERR_ARG);
     CHECK(m == NULL);
-    CHECK(pff_mixer_init(mem, sizeof(mem), PFF_MAX_SLOTS + 1, &m) == PFF_ERR_ARG);
-    CHECK(pff_mixer_init(NULL, sizeof(mem), 1, &m) == PFF_ERR_ARG);
-    CHECK(pff_mixer_init(mem, sizeof(mem), 1, NULL) == PFF_ERR_ARG);
-    CHECK(pff_mixer_init(mem, 8, SLOTS, &m) == PFF_ERR_SPACE);
+    CHECK(pff_mixer_init(mem, sizeof(mem), PFF_MAX_SLOTS + 1, NULL, &m) == PFF_ERR_ARG);
+    CHECK(pff_mixer_init(NULL, sizeof(mem), 1, NULL, &m) == PFF_ERR_ARG);
+    CHECK(pff_mixer_init(mem, sizeof(mem), 1, NULL, NULL) == PFF_ERR_ARG);
+    CHECK(pff_mixer_init(mem, 8, SLOTS, NULL, &m) == PFF_ERR_SPACE);
     for (shift = 0; shift < 8; shift++) {
-        CHECK(pff_mixer_init(raw + shift, PFF_MIXER_SIZE(PFF_MAX_SLOTS), PFF_MAX_SLOTS, &m) == PFF_OK);
-        CHECK(pff_mixer_init(raw + shift, PFF_MIXER_SIZE(1), 1, &m) == PFF_OK);
+        CHECK(pff_mixer_init(raw + shift, PFF_MIXER_SIZE(PFF_MAX_SLOTS), PFF_MAX_SLOTS, NULL, &m) == PFF_OK);
+        CHECK(pff_mixer_init(raw + shift, PFF_MIXER_SIZE(1), 1, NULL, &m) == PFF_OK);
     }
 }
 
@@ -111,7 +122,7 @@ static void test_space(void)
 
     for (shift = 0; shift < 8; shift++) {
         for (len = 0; len <= PFF_MIXER_SIZE(SLOTS); len++) {
-            int status = pff_mixer_init(mem + shift, len, SLOTS, &m);
+            int status = pff_mixer_init(mem + shift, len, SLOTS, NULL, &m);
 
             CHECK(status == PFF_OK || status == PFF_ERR_SPACE);
             CHECK((status == PFF_OK) == (m != NULL));
@@ -283,8 +294,8 @@ static void test_slow_slope_wakes(void)
     uint32_t next = 0;
     unsigned wakes = 0;
 
-    CHECK(pff_mixer_init(woken_mem, sizeof(woken_mem), SLOTS, &woken) == PFF_OK);
-    CHECK(pff_mixer_set_scale(every, 255) == PFF_OK && pff_mixer_set_scale(woken, 255) == PFF_OK);
+    CHECK(pff_mixer_init(woken_mem, sizeof(woken_mem), SLOTS, NULL, &woken) == PFF_OK);
+    CHECK(configure(every, PFF_MIX_MAX, 255, 0) == PFF_OK && configure(woken, PFF_MIX_MAX, 255, 0) == PFF_OK);
     CHECK(pff_mixer_upload(every, 0, &e, 0) == PFF_OK && pff_mixer_upload(woken, 0, &e, 0) == PFF_OK);
     CHECK(pff_mixer_play(every, 0, 1, 0) == PFF_OK && pff_mixer_play(woken, 0, 1, 0) == PFF_OK);
     for (t = 0; t <= 1000; t++) {
@@ -348,19 +359,36 @@ static void test_mix_gain_scale(void)
     CHECK(pff_mixer_play(m, 0, 1, 0) == PFF_OK);
     CHECK(pff_mixer_play(m, 3, 1, 0) == PFF_OK);
     expect(m, 0, 1, 40000, 20000);
-    CHECK(pff_mixer_set_mix(m, PFF_MIX_SUM) == PFF_OK);
+    CHECK(configure(m, PFF_MIX_SUM, 0, 0) == PFF_OK);
     expect(m, 1, 1, 65535, 30000);
     CHECK(pff_mixer_set_gain(m, 32768) == PFF_OK);
     expect(m, 2, 1, 35000, 15000);
-    CHECK(pff_mixer_set_scale(m, 255) == PFF_OK);
+    CHECK(configure(m, PFF_MIX_SUM, 255, 0) == PFF_OK);
     expect(m, 3, 1, 136, 58);
     CHECK(pff_mixer_set_gain(m, 0) == PFF_OK);
     expect(m, 4, 1, 0, 0);
-    CHECK(pff_mixer_set_mix(m, 2) == PFF_ERR_ARG);
-    CHECK(pff_mixer_set_scale(m, 0) == PFF_ERR_ARG);
+    CHECK(configure(m, 2, 0, 0) == PFF_ERR_ARG);
+    CHECK(configure(m, PFF_MIX_MAX, 65536, 0) == PFF_ERR_ARG);
     CHECK(pff_mixer_set_gain(NULL, 1) == PFF_ERR_ARG);
-    CHECK(pff_mixer_set_mix(NULL, PFF_MIX_MAX) == PFF_ERR_ARG);
-    CHECK(pff_mixer_set_scale(NULL, 1) == PFF_ERR_ARG);
+    CHECK(configure(NULL, PFF_MIX_MAX, 0, 0) == PFF_ERR_ARG);
+    CHECK(pff_mixer_configure(m, NULL) == PFF_ERR_ARG);
+}
+
+static void test_config_at_init(void)
+{
+    pff_mixer_t *m = NULL;
+    pff_effect_t a = rumble(40000, 10000, 0);
+    pff_config_t c;
+
+    memset(&c, 0, sizeof(c));
+    CHECK(pff_mixer_init(mem, sizeof(mem), SLOTS, &c, &m) == PFF_ERR_ARG && m == NULL);
+    c.size = sizeof(c);
+    c.motor_max = 255;
+    CHECK(pff_mixer_init(mem, sizeof(mem), SLOTS, &c, &m) == PFF_OK);
+    CHECK(pff_mixer_upload(m, 0, &a, 0) == PFF_OK && pff_mixer_play(m, 0, 1, 0) == PFF_OK);
+    expect(m, 0, 1, 156, 39);
+    c.size = sizeof(c) + 4;
+    CHECK(pff_mixer_configure(m, &c) == PFF_ERR_ARG);
 }
 
 static void test_interval(void)
@@ -369,7 +397,7 @@ static void test_interval(void)
     pff_effect_t a = rumble(1000, 1000, 5);
     pff_effect_t b = rumble(2000, 2000, 0);
 
-    CHECK(pff_mixer_set_interval(m, 20) == PFF_OK);
+    CHECK(configure(m, PFF_MIX_MAX, 0, 20) == PFF_OK);
     CHECK(pff_mixer_upload(m, 0, &a, 0) == PFF_OK);
     CHECK(pff_mixer_upload(m, 1, &b, 0) == PFF_OK);
     CHECK(pff_mixer_play(m, 0, 1, 0) == PFF_OK);
@@ -382,8 +410,7 @@ static void test_interval(void)
     CHECK(pff_mixer_stop_all(m) == PFF_OK);
     CHECK(wait_at(m, 21) == 19);
     expect(m, 40, 1, 0, 0);
-    CHECK(pff_mixer_set_interval(NULL, 1) == PFF_ERR_ARG);
-    CHECK(pff_mixer_set_interval(m, 0x80000000u) == PFF_ERR_ARG);
+    CHECK(configure(m, PFF_MIX_MAX, 0, 0x80000000u) == PFF_ERR_ARG);
 }
 
 static void test_interval_after_idle(void)
@@ -391,7 +418,7 @@ static void test_interval_after_idle(void)
     pff_mixer_t *m = new_mixer();
     pff_effect_t a = rumble(1000, 1000, 5);
 
-    CHECK(pff_mixer_set_interval(m, 20) == PFF_OK);
+    CHECK(configure(m, PFF_MIX_MAX, 0, 20) == PFF_OK);
     CHECK(pff_mixer_upload(m, 0, &a, 0) == PFF_OK);
     CHECK(pff_mixer_play(m, 0, 1, 0) == PFF_OK);
     expect(m, 0, 1, 1000, 1000);
@@ -496,6 +523,7 @@ int main(void)
     test_envelope();
     test_slow_slope_wakes();
     test_stop_and_playing();
+    test_config_at_init();
     test_mix_gain_scale();
     test_interval();
     test_interval_after_idle();
