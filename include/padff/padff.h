@@ -33,6 +33,12 @@ extern "C" {
 #define PFF_CONSTANT 3
 #define PFF_RAMP 4
 
+#define PFF_MOTOR_STRONG 0
+#define PFF_MOTOR_WEAK 1
+#define PFF_MOTOR_LEFT_TRIGGER 2
+#define PFF_MOTOR_RIGHT_TRIGGER 3
+#define PFF_MOTORS 4
+
 #define PFF_MIX_MAX 0
 #define PFF_MIX_SUM 1
 
@@ -53,6 +59,8 @@ typedef struct pff_effect {
     uint16_t attack_level;
     uint16_t fade_ms;
     uint16_t fade_level;
+    uint16_t left_trigger;
+    uint16_t right_trigger;
 } pff_effect_t;
 
 typedef struct pff_config {
@@ -76,6 +84,8 @@ PFF_API int pff_mixer_stop_all(pff_mixer_t *mixer);
 PFF_API int pff_mixer_playing(const pff_mixer_t *mixer, unsigned slot, uint32_t now_ms, int *out_playing);
 PFF_API int pff_mixer_poll(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_strong, uint16_t *out_weak,
                            int *out_send);
+PFF_API int pff_mixer_poll_motors(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_motors, unsigned count,
+                                  int *out_send);
 PFF_API int pff_mixer_next(const pff_mixer_t *mixer, uint32_t now_ms, uint32_t *out_wait_ms);
 PFF_API const char *pff_strerror(int status);
 

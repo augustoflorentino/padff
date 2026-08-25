@@ -26,7 +26,9 @@ static void fuzz_upload(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
     pff_effect_t e;
     unsigned slot = fuzz_take(in, 1) % (FUZZ_SLOTS + 1);
 
-    e.size = fuzz_take(in, 1) == 0 ? 0 : sizeof(e);
+    static const uint16_t sizes[4] = {0, 24, sizeof(pff_effect_t), sizeof(pff_effect_t)};
+
+    e.size = sizes[fuzz_take(in, 1) % 4];
     e.type = (uint16_t)(fuzz_take(in, 1) % 6);
     e.strong = (uint16_t)fuzz_take(in, 2);
     e.weak = (uint16_t)fuzz_take(in, 2);
@@ -38,6 +40,8 @@ static void fuzz_upload(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
     e.attack_level = (uint16_t)fuzz_take(in, 2);
     e.fade_ms = (uint16_t)fuzz_take(in, 2);
     e.fade_level = (uint16_t)fuzz_take(in, 2);
+    e.left_trigger = (uint16_t)fuzz_take(in, 2);
+    e.right_trigger = (uint16_t)fuzz_take(in, 2);
     pff_mixer_upload(m, slot, &e, now);
 }
 
@@ -65,17 +69,20 @@ static void fuzz_check_quiet(pff_mixer_t *m, uint32_t now, uint32_t until)
     }
 }
 
-static void fuzz_check_idle(const pff_mixer_t *m, uint32_t now, uint16_t strong, uint16_t weak, int send)
+static void fuzz_check_idle(const pff_mixer_t *m, uint32_t now, const uint16_t *motors, int send)
 {
     unsigned i;
     int playing = 0;
     int any = 0;
+    int moving = 0;
 
     for (i = 0; i < FUZZ_SLOTS; i++) {
         pff_mixer_playing(m, i, now, &playing);
         any |= playing;
     }
-    if (send && !any && (strong != 0 || weak != 0))
+    for (i = 0; i < PFF_MOTORS; i++)
+        moving |= motors[i] != 0;
+    if (send && !any && moving)
         abort();
 }
 
@@ -83,12 +90,11 @@ static uint32_t fuzz_advance(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
 {
     uint32_t step = fuzz_take(in, 1);
     uint32_t wait = 0;
-    uint16_t strong;
-    uint16_t weak;
+    uint16_t motors[PFF_MOTORS];
     int send;
 
-    pff_mixer_poll(m, now, &strong, &weak, &send);
-    fuzz_check_idle(m, now, strong, weak, send);
+    pff_mixer_poll_motors(m, now, motors, PFF_MOTORS, &send);
+    fuzz_check_idle(m, now, motors, send);
     pff_mixer_next(m, now, &wait);
     if (wait > 0 && wait != PFF_NEVER)
         fuzz_check_quiet(m, now, now + (wait < step ? wait : step));

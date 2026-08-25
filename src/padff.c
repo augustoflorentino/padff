@@ -20,8 +20,7 @@ struct pff_mixer {
     int mix;
     uint16_t gain;
     uint16_t motor_max;
-    uint16_t sent_strong;
-    uint16_t sent_weak;
+    uint16_t sent[PFF_MOTORS];
     uint8_t has_sent;
     uint32_t interval;
     uint32_t last_send;
@@ -29,12 +28,13 @@ struct pff_mixer {
 };
 
 typedef struct {
-    uint32_t strong;
-    uint32_t weak;
+    uint32_t motor[PFF_MOTORS];
     uint32_t wait;
 } pff_sample_t;
 
-typedef char pff_effect_size_check[sizeof(pff_effect_t) == 24 && offsetof(pff_effect_t, size) == 0 ? 1 : -1];
+#define PFF_EFFECT_SIZE_1 24u
+
+typedef char pff_effect_size_check[sizeof(pff_effect_t) == 28 && offsetof(pff_effect_t, left_trigger) == PFF_EFFECT_SIZE_1 ? 1 : -1];
 typedef char pff_slot_size_check[sizeof(struct pff_slot) <= 48 ? 1 : -1];
 typedef char pff_head_size_check[offsetof(struct pff_mixer, slot) + PFF_ALIGN - 1 <= 64 ? 1 : -1];
 
@@ -68,15 +68,27 @@ static uint32_t pff_base_level(const pff_effect_t *e, uint32_t u, int *sloping)
     return pff_level_intensity(level);
 }
 
+static int pff_envelope(pff_sample_t *out, uint32_t level, uint32_t pos, uint32_t span)
+{
+    int sloping = 0;
+    unsigned i;
+
+    for (i = 0; i < PFF_MOTORS; i++) {
+        if (i >= PFF_MOTOR_LEFT_TRIGGER && out->motor[i] == 0)
+            continue;
+        sloping |= out->motor[i] != level;
+        out->motor[i] = pff_lerp(level, out->motor[i], pos, span);
+    }
+    return sloping;
+}
+
 static void pff_apply_envelope(const pff_effect_t *e, uint32_t u, pff_sample_t *out, int *sloping)
 {
     uint32_t len = e->length_ms;
     uint32_t left = len - u;
 
     if (e->attack_ms > 0 && u < e->attack_ms) {
-        *sloping |= out->strong != e->attack_level || out->weak != e->attack_level;
-        out->strong = pff_lerp(e->attack_level, out->strong, u, e->attack_ms);
-        out->weak = pff_lerp(e->attack_level, out->weak, u, e->attack_ms);
+        *sloping |= pff_envelope(out, e->attack_level, u, e->attack_ms);
         out->wait = pff_min(out->wait, e->attack_ms - u);
         return;
     }
@@ -86,9 +98,7 @@ static void pff_apply_envelope(const pff_effect_t *e, uint32_t u, pff_sample_t *
         out->wait = pff_min(out->wait, left - e->fade_ms);
         return;
     }
-    *sloping |= out->strong != e->fade_level || out->weak != e->fade_level;
-    out->strong = pff_lerp(e->fade_level, out->strong, left, e->fade_ms);
-    out->weak = pff_lerp(e->fade_level, out->weak, left, e->fade_ms);
+    *sloping |= pff_envelope(out, e->fade_level, left, e->fade_ms);
 }
 
 static void pff_effect_sample(const pff_effect_t *e, uint32_t u, pff_sample_t *out)
@@ -97,11 +107,15 @@ static void pff_effect_sample(const pff_effect_t *e, uint32_t u, pff_sample_t *o
 
     out->wait = e->length_ms > 0 ? (uint32_t)e->length_ms - u : PFF_NEVER;
     if (e->type == PFF_RUMBLE) {
-        out->strong = e->strong;
-        out->weak = e->weak;
+        out->motor[PFF_MOTOR_STRONG] = e->strong;
+        out->motor[PFF_MOTOR_WEAK] = e->weak;
+        out->motor[PFF_MOTOR_LEFT_TRIGGER] = e->left_trigger;
+        out->motor[PFF_MOTOR_RIGHT_TRIGGER] = e->right_trigger;
     } else {
-        out->strong = pff_base_level(e, u, &sloping);
-        out->weak = out->strong;
+        out->motor[PFF_MOTOR_STRONG] = pff_base_level(e, u, &sloping);
+        out->motor[PFF_MOTOR_WEAK] = out->motor[PFF_MOTOR_STRONG];
+        out->motor[PFF_MOTOR_LEFT_TRIGGER] = 0;
+        out->motor[PFF_MOTOR_RIGHT_TRIGGER] = 0;
     }
     pff_apply_envelope(e, u, out, &sloping);
     if (sloping)
@@ -114,8 +128,7 @@ static void pff_slot_sample(const struct pff_slot *s, uint32_t now, pff_sample_t
     int32_t since = (int32_t)(now - s->start);
     uint32_t t;
 
-    out->strong = 0;
-    out->weak = 0;
+    memset(out->motor, 0, sizeof(out->motor));
     out->wait = PFF_NEVER;
     if (!s->playing)
         return;
@@ -180,19 +193,30 @@ static uint16_t pff_quantize(const pff_mixer_t *m, uint32_t value)
 static void pff_mixer_sample(const pff_mixer_t *m, uint32_t now, pff_sample_t *out)
 {
     unsigned i;
+    unsigned k;
     pff_sample_t one;
 
-    out->strong = 0;
-    out->weak = 0;
+    memset(out->motor, 0, sizeof(out->motor));
     out->wait = PFF_NEVER;
     for (i = 0; i < m->slots; i++) {
         pff_slot_sample(&m->slot[i], now, &one);
-        out->strong = pff_mix(m->mix, out->strong, one.strong * m->gain / PFF_FULL);
-        out->weak = pff_mix(m->mix, out->weak, one.weak * m->gain / PFF_FULL);
+        for (k = 0; k < PFF_MOTORS; k++)
+            out->motor[k] = pff_mix(m->mix, out->motor[k], one.motor[k] * m->gain / PFF_FULL);
         out->wait = pff_min(out->wait, one.wait);
     }
-    out->strong = pff_quantize(m, out->strong);
-    out->weak = pff_quantize(m, out->weak);
+    for (k = 0; k < PFF_MOTORS; k++)
+        out->motor[k] = pff_quantize(m, out->motor[k]);
+}
+
+static int pff_differs(const uint32_t *a, const uint16_t *b)
+{
+    unsigned k;
+
+    for (k = 0; k < PFF_MOTORS; k++) {
+        if (a[k] != b[k])
+            return 1;
+    }
+    return 0;
 }
 
 static uint32_t pff_rate_left(const pff_mixer_t *m, uint32_t now)
@@ -276,7 +300,9 @@ int pff_mixer_upload(pff_mixer_t *mixer, unsigned slot, const pff_effect_t *effe
 {
     struct pff_slot *s;
 
-    if (mixer == NULL || effect == NULL || effect->size != sizeof(pff_effect_t))
+    if (mixer == NULL || effect == NULL)
+        return PFF_ERR_ARG;
+    if (effect->size != sizeof(pff_effect_t) && effect->size != PFF_EFFECT_SIZE_1)
         return PFF_ERR_ARG;
     s = pff_get_slot(mixer, slot);
     if (s == NULL)
@@ -284,7 +310,8 @@ int pff_mixer_upload(pff_mixer_t *mixer, unsigned slot, const pff_effect_t *effe
     if (effect->type < PFF_RUMBLE || effect->type > PFF_RAMP)
         return PFF_ERR_EFFECT;
     pff_slot_rebase(s, now_ms);
-    s->effect = *effect;
+    memset(&s->effect, 0, sizeof(s->effect));
+    memcpy(&s->effect, effect, effect->size);
     s->loaded = 1;
     s->steady = 0;
     s->start = now_ms;
@@ -368,28 +395,43 @@ int pff_mixer_stop_all(pff_mixer_t *mixer)
     return PFF_OK;
 }
 
-int pff_mixer_poll(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_strong, uint16_t *out_weak,
-                   int *out_send)
+int pff_mixer_poll_motors(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_motors, unsigned count,
+                          int *out_send)
 {
     pff_sample_t now;
     unsigned i;
 
-    if (mixer == NULL || out_strong == NULL || out_weak == NULL || out_send == NULL)
+    if (mixer == NULL || out_motors == NULL || out_send == NULL || count == 0 || count > PFF_MOTORS)
         return PFF_ERR_ARG;
     for (i = 0; i < mixer->slots; i++)
         pff_slot_rebase(&mixer->slot[i], now_ms);
     if (pff_rate_left(mixer, now_ms) == 0)
         mixer->has_sent = 0;
     pff_mixer_sample(mixer, now_ms, &now);
-    *out_send = (now.strong != mixer->sent_strong || now.weak != mixer->sent_weak) && !mixer->has_sent;
+    *out_send = pff_differs(now.motor, mixer->sent) && !mixer->has_sent;
     if (*out_send) {
-        mixer->sent_strong = (uint16_t)now.strong;
-        mixer->sent_weak = (uint16_t)now.weak;
+        for (i = 0; i < PFF_MOTORS; i++)
+            mixer->sent[i] = (uint16_t)now.motor[i];
         mixer->last_send = now_ms;
         mixer->has_sent = 1;
     }
-    *out_strong = mixer->sent_strong;
-    *out_weak = mixer->sent_weak;
+    memcpy(out_motors, mixer->sent, count * sizeof(*out_motors));
+    return PFF_OK;
+}
+
+int pff_mixer_poll(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_strong, uint16_t *out_weak,
+                   int *out_send)
+{
+    uint16_t motors[2];
+    int status;
+
+    if (out_strong == NULL || out_weak == NULL)
+        return PFF_ERR_ARG;
+    status = pff_mixer_poll_motors(mixer, now_ms, motors, 2, out_send);
+    if (status != PFF_OK)
+        return status;
+    *out_strong = motors[PFF_MOTOR_STRONG];
+    *out_weak = motors[PFF_MOTOR_WEAK];
     return PFF_OK;
 }
 
@@ -400,7 +442,7 @@ static uint32_t pff_slope_wait(const pff_mixer_t *m, uint32_t now, const pff_sam
 
     for (k = 1; k < PFF_SLOPE_SCAN; k++) {
         pff_mixer_sample(m, now + k, &later);
-        if (later.strong != at->strong || later.weak != at->weak || later.wait != 1)
+        if (memcmp(later.motor, at->motor, sizeof(at->motor)) != 0 || later.wait != 1)
             return k;
     }
     return k;
@@ -417,7 +459,7 @@ int pff_mixer_next(const pff_mixer_t *mixer, uint32_t now_ms, uint32_t *out_wait
     rate_left = pff_rate_left(mixer, now_ms);
     if (now.wait == 1)
         now.wait = pff_slope_wait(mixer, now_ms, &now);
-    if (now.strong != mixer->sent_strong || now.weak != mixer->sent_weak)
+    if (pff_differs(now.motor, mixer->sent))
         *out_wait_ms = rate_left;
     else if (now.wait == PFF_NEVER)
         *out_wait_ms = rate_left > 0 ? rate_left : PFF_NEVER;

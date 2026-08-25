@@ -374,6 +374,69 @@ static void test_mix_gain_scale(void)
     CHECK(pff_mixer_configure(m, NULL) == PFF_ERR_ARG);
 }
 
+static void expect_motors(pff_mixer_t *m, uint32_t now, int send, uint16_t s0, uint16_t s1, uint16_t s2,
+                          uint16_t s3)
+{
+    uint16_t got[PFF_MOTORS];
+    int sent = -1;
+
+    CHECK(pff_mixer_poll_motors(m, now, got, PFF_MOTORS, &sent) == PFF_OK);
+    if (sent != send || got[0] != s0 || got[1] != s1 || got[2] != s2 || got[3] != s3) {
+        fprintf(stderr, "t=%u: got send=%d %u/%u/%u/%u\n", (unsigned)now, sent, (unsigned)got[0],
+                (unsigned)got[1], (unsigned)got[2], (unsigned)got[3]);
+        exit(1);
+    }
+}
+
+static void test_triggers(void)
+{
+    pff_mixer_t *m = new_mixer();
+    pff_effect_t e = rumble(1000, 0, 100);
+    pff_effect_t ramp = level(PFF_RAMP, 16384, 16384, 0);
+    uint16_t two[2];
+    int send;
+
+    e.left_trigger = 30000;
+    e.attack_ms = 10;
+    e.attack_level = 10000;
+    CHECK(pff_mixer_upload(m, 0, &e, 0) == PFF_OK && pff_mixer_play(m, 0, 1, 0) == PFF_OK);
+    expect_motors(m, 0, 1, 10000, 10000, 10000, 0);
+    CHECK(wait_at(m, 0) == 1);
+    expect_motors(m, 5, 1, 5500, 5000, 20000, 0);
+    expect_motors(m, 10, 1, 1000, 0, 30000, 0);
+    CHECK(wait_at(m, 10) == 90);
+    ramp.right_trigger = 50000;
+    CHECK(pff_mixer_upload(m, 1, &ramp, 20) == PFF_OK && pff_mixer_play(m, 1, 1, 20) == PFF_OK);
+    expect_motors(m, 20, 1, 32768, 32768, 30000, 0);
+    CHECK(pff_mixer_stop(m, 1) == PFF_OK);
+    e.left_trigger = 31000;
+    CHECK(pff_mixer_upload(m, 0, &e, 30) == PFF_OK);
+    CHECK(pff_mixer_poll(m, 40, &two[0], &two[1], &send) == PFF_OK);
+    CHECK(send == 1 && two[0] == 1000 && two[1] == 0);
+    CHECK(pff_mixer_poll_motors(m, 40, two, 0, &send) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll_motors(m, 40, two, PFF_MOTORS + 1, &send) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll_motors(m, 40, NULL, 1, &send) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll_motors(NULL, 40, two, 1, &send) == PFF_ERR_ARG);
+}
+
+static void test_effect_size_24(void)
+{
+    pff_mixer_t *m = new_mixer();
+    pff_effect_t full = rumble(2000, 3000, 0);
+    uint16_t *old = malloc(24);
+
+    CHECK(old != NULL);
+    full.size = 24;
+    full.left_trigger = 9999;
+    memcpy(old, &full, 24);
+    CHECK(pff_mixer_upload(m, 0, (const pff_effect_t *)(void *)old, 0) == PFF_OK);
+    CHECK(pff_mixer_play(m, 0, 1, 0) == PFF_OK);
+    expect_motors(m, 0, 1, 2000, 3000, 0, 0);
+    old[0] = 26;
+    CHECK(pff_mixer_upload(m, 0, (const pff_effect_t *)(void *)old, 0) == PFF_ERR_ARG);
+    free(old);
+}
+
 static void test_config_at_init(void)
 {
     pff_mixer_t *m = NULL;
@@ -445,7 +508,7 @@ static void test_commands(void)
     bad.type = PFF_RAMP + 1;
     CHECK(pff_mixer_upload(m, 0, &bad, 0) == PFF_ERR_EFFECT);
     bad.type = PFF_RUMBLE;
-    bad.size = 22;
+    bad.size = 26;
     CHECK(pff_mixer_upload(m, 0, &bad, 0) == PFF_ERR_ARG);
     bad.size = 0;
     CHECK(pff_mixer_upload(m, 0, &bad, 0) == PFF_ERR_ARG);
@@ -524,6 +587,8 @@ int main(void)
     test_slow_slope_wakes();
     test_stop_and_playing();
     test_config_at_init();
+    test_triggers();
+    test_effect_size_24();
     test_mix_gain_scale();
     test_interval();
     test_interval_after_idle();
