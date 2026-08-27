@@ -82,6 +82,11 @@ to `wait_ms` (`PFF_NEVER`: until the next command). While an envelope or ramp is
 `wait_ms` is the time until the scaled output next changes, looking at most 64 ms ahead, so a
 slow ramp on a motor with few steps wakes the loop only when there is something to send.
 
+`pff_mixer_poll_motors` reports up to `PFF_MOTORS` (4) motors in the order
+`PFF_MOTOR_STRONG`, `PFF_MOTOR_WEAK`, `PFF_MOTOR_LEFT_TRIGGER`, `PFF_MOTOR_RIGHT_TRIGGER`;
+`pff_mixer_poll` reports the first two. Either one sends when any of the four motors changes,
+so a gamepad without trigger motors may get a send with the same strong and weak values.
+
 `pff_mixer_stop` stops one slot and `pff_mixer_stop_all` every slot; the effects stay uploaded.
 `pff_mixer_playing` tells whether a slot is still playing at `now_ms` (inside its delay counts
 as playing; after its last repetition it does not), for answering a game that asks.
@@ -109,7 +114,7 @@ Effect fields (`pff_effect_t`):
 
 | field | meaning |
 | --- | --- |
-| `size` | `sizeof(pff_effect_t)`; upload rejects any other value with `PFF_ERR_ARG` |
+| `size` | `sizeof(pff_effect_t)` (28), or 24 for an effect without the trigger fields (padff 1.x, vpad 1.x); upload rejects any other value with `PFF_ERR_ARG` and reads only `size` bytes |
 | `type` | `PFF_RUMBLE`, `PFF_PERIODIC`, `PFF_CONSTANT` or `PFF_RAMP` |
 | `strong`, `weak` | rumble: motor intensities, 0 to 65535 |
 | `level` | periodic magnitude, constant level, ramp start: -32768 to 32767, intensity is `2 * abs(level)` |
@@ -118,6 +123,7 @@ Effect fields (`pff_effect_t`):
 | `length_ms` | length of each repetition; 0 plays until stopped |
 | `attack_ms`, `attack_level` | start from `attack_level` (intensity 0 to 65535) and reach the effect in `attack_ms` |
 | `fade_ms`, `fade_level` | go to `fade_level` in the last `fade_ms`; only for effects with a length |
+| `left_trigger`, `right_trigger` | rumble: trigger motor intensities (Xbox impulse triggers), 0 to 65535; the envelope applies to a trigger only when it is not 0 |
 
 Behavior, modeled on Linux force feedback (`ff-memless`):
 
