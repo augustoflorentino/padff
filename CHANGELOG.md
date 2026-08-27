@@ -4,6 +4,22 @@ Each release lists what changed, what updating means for existing code, and ever
 
 ## Unreleased
 
+## 2.4.0 - 2026-08-27
+
+- added: trigger motors (Xbox impulse triggers): `left_trigger` and `right_trigger` at the end
+  of `pff_effect_t`, now 28 bytes, for rumble effects; the envelope applies to a trigger only
+  when it is not 0
+- added: `pff_mixer_poll_motors` reports strong, weak, left and right trigger motors
+  (`PFF_MOTOR_*`, `PFF_MOTORS`); `pff_mixer_next` and the rate limit cover all four
+- `pff_mixer_upload` accepts `size` 24 (effects written for padff 1.x and 2.0, and vpad 1.x)
+  as well as 28, and reads only `size` bytes; the trigger fields of a 24-byte effect are 0
+- the fuzz target uploads 24- and 28-byte effects and checks all four motors
+
+Updating: no code changes needed for code that sets `size = sizeof(pff_effect_t)`. Code that
+copies a 24-byte effect from another struct must copy `sizeof` of the source, not of
+`pff_effect_t`, and keep `size` at 24. `pff_mixer_poll` now also sends when only a trigger
+motor changed.
+
 ## 2.0.0 - 2026-08-24
 
 - breaking: `pff_mixer_init` takes a `const pff_config_t *` (mix, motor scale, minimum
