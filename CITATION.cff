@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "Cite padff with the metadata below if you use it in published work."
+type: software
+title: padff
+abstract: "C99 force feedback mixer: turns the rumble effects a game uploads into gamepad motor intensities"
+authors:
+  - family-names: Florentino
+    given-names: Augusto
+license: MIT
+repository-code: "https://github.com/augustoflorentino/padff"
+keywords:
+  - c
+  - c99
+  - library
+  - force-feedback
+  - gamepad
+  - haptics
+  - rumble
+  - embedded
+  - single-header
