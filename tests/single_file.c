@@ -8,8 +8,7 @@ int main(void)
     static unsigned char mem[PFF_MIXER_SIZE(1)];
     pff_mixer_t *mixer = NULL;
     pff_effect_t effect;
-    uint16_t strong = 0;
-    uint16_t weak = 0;
+    uint16_t motors[2] = {0, 0};
     int send = 0;
     int status;
 
@@ -23,8 +22,8 @@ int main(void)
     if (status == PFF_OK)
         status = pff_mixer_play(mixer, 0, 1, 0);
     if (status == PFF_OK)
-        status = pff_mixer_poll(mixer, 0, &strong, &weak, &send);
+        status = pff_mixer_poll(mixer, 0, motors, 2, &send);
     if (pff_strerror(status) == NULL)
         status = PFF_ERR_ARG;
-    return status == PFF_OK && send && strong == 65535 && weak == 0 ? 0 : 1;
+    return status == PFF_OK && send && motors[0] == 65535 && motors[1] == 0 ? 0 : 1;
 }

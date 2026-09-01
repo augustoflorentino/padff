@@ -53,17 +53,17 @@ static void fuzz_configure(pff_mixer_t *m, fuzz_input_t *in)
     c.mix = fuzz_take(in, 1) % 3;
     c.motor_max = fuzz_take(in, 3) % 0x10002;
     c.interval_ms = fuzz_take(in, 1) % 32;
+    c.motors = fuzz_take(in, 1) % (PFF_MOTORS + 2);
     pff_mixer_configure(m, &c);
 }
 
 static void fuzz_check_quiet(pff_mixer_t *m, uint32_t now, uint32_t until)
 {
-    uint16_t strong;
-    uint16_t weak;
+    uint16_t motors[2] = {0, 0};
     int send;
 
     for (; now != until; now++) {
-        pff_mixer_poll(m, now, &strong, &weak, &send);
+        pff_mixer_poll(m, now, motors, 2, &send);
         if (send)
             abort();
     }
@@ -93,7 +93,7 @@ static uint32_t fuzz_advance(pff_mixer_t *m, fuzz_input_t *in, uint32_t now)
     uint16_t motors[PFF_MOTORS];
     int send;
 
-    pff_mixer_poll_motors(m, now, motors, PFF_MOTORS, &send);
+    pff_mixer_poll(m, now, motors, PFF_MOTORS, &send);
     fuzz_check_idle(m, now, motors, send);
     pff_mixer_next(m, now, &wait);
     if (wait > 0 && wait != PFF_NEVER)

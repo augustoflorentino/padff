@@ -63,8 +63,7 @@ int main(void)
     uint32_t now = 0;
     uint32_t wait = 0;
     size_t next = 0;
-    uint16_t strong;
-    uint16_t weak;
+    uint16_t motors[2] = {0, 0};
     int send;
 
     memset(&config, 0, sizeof(config));
@@ -75,9 +74,9 @@ int main(void)
     while (next < count || wait != PFF_NEVER) {
         while (next < count && commands[next].ms <= now)
             apply(mixer, &commands[next++]);
-        pff_mixer_poll(mixer, now, &strong, &weak, &send);
+        pff_mixer_poll(mixer, now, motors, 2, &send);
         if (send)
-            printf("%4u ms  strong %5u  weak %5u\n", (unsigned)now, strong, weak);
+            printf("%4u ms  strong %5u  weak %5u\n", (unsigned)now, motors[0], motors[1]);
         pff_mixer_next(mixer, now, &wait);
         if (next < count && (wait == PFF_NEVER || commands[next].ms - now < wait))
             wait = commands[next].ms - now;

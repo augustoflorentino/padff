@@ -68,6 +68,7 @@ typedef struct pff_config {
     uint32_t mix;
     uint32_t motor_max;
     uint32_t interval_ms;
+    uint32_t motors;
 } pff_config_t;
 
 typedef struct pff_mixer pff_mixer_t;
@@ -82,10 +83,8 @@ PFF_API int pff_mixer_play(pff_mixer_t *mixer, unsigned slot, uint32_t count, ui
 PFF_API int pff_mixer_stop(pff_mixer_t *mixer, unsigned slot);
 PFF_API int pff_mixer_stop_all(pff_mixer_t *mixer);
 PFF_API int pff_mixer_playing(const pff_mixer_t *mixer, unsigned slot, uint32_t now_ms, int *out_playing);
-PFF_API int pff_mixer_poll(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_strong, uint16_t *out_weak,
+PFF_API int pff_mixer_poll(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_motors, unsigned count,
                            int *out_send);
-PFF_API int pff_mixer_poll_motors(pff_mixer_t *mixer, uint32_t now_ms, uint16_t *out_motors, unsigned count,
-                                  int *out_send);
 PFF_API int pff_mixer_next(const pff_mixer_t *mixer, uint32_t now_ms, uint32_t *out_wait_ms);
 PFF_API const char *pff_strerror(int status);
 

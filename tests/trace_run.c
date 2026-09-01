@@ -139,14 +139,13 @@ static void apply(pff_mixer_t *m, const event_t *ev, uint32_t now)
 
 static uint32_t step(pff_mixer_t *m, uint32_t t, uint32_t base, int sleep)
 {
-    uint16_t strong;
-    uint16_t weak;
+    uint16_t motors[2] = {0, 0};
     int send;
     uint32_t wait;
 
-    pff_mixer_poll(m, base + t, &strong, &weak, &send);
+    pff_mixer_poll(m, base + t, motors, 2, &send);
     if (send && got.count < MAX_LINES)
-        snprintf(got.lines[got.count++], sizeof(got.lines[0]), "%u %u %u", (unsigned)t, strong, weak);
+        snprintf(got.lines[got.count++], sizeof(got.lines[0]), "%u %u %u", (unsigned)t, motors[0], motors[1]);
     if (!sleep)
         return 1;
     pff_mixer_next(m, base + t, &wait);
@@ -170,6 +169,7 @@ static void run(uint32_t base, int sleep)
     config.mix = (uint32_t)trace.mix;
     config.motor_max = (uint32_t)trace.scale;
     config.interval_ms = (uint32_t)trace.interval;
+    config.motors = 2;
     pff_mixer_init(mem, sizeof(mem), TRACE_SLOTS, &config, &m);
     while (t <= trace.end) {
         uint32_t wait;

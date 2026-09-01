@@ -12,8 +12,7 @@ int main(void)
     pff_effect_t engine;
     uint32_t now = 0;
     uint32_t wait = 0;
-    uint16_t strong;
-    uint16_t weak;
+    uint16_t motors[2] = {0, 0};
     int send;
 
     memset(&hit, 0, sizeof(hit));
@@ -39,9 +38,9 @@ int main(void)
     pff_mixer_play(mixer, 1, 1, now);
 
     while (wait != PFF_NEVER) {
-        pff_mixer_poll(mixer, now, &strong, &weak, &send);
+        pff_mixer_poll(mixer, now, motors, 2, &send);
         if (send)
-            printf("%4u ms  strong %3u  weak %3u\n", (unsigned)now, strong, weak);
+            printf("%4u ms  strong %3u  weak %3u\n", (unsigned)now, motors[0], motors[1]);
         pff_mixer_next(mixer, now, &wait);
         now += wait < 10 ? 10 : wait;
     }

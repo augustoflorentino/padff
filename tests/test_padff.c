@@ -30,6 +30,7 @@ static int configure(pff_mixer_t *m, uint32_t mix, uint32_t motor_max, uint32_t 
     c.mix = mix;
     c.motor_max = motor_max;
     c.interval_ms = interval_ms;
+    c.motors = 0;
     return pff_mixer_configure(m, &c);
 }
 
@@ -46,7 +47,11 @@ static poll_t poll_at(pff_mixer_t *m, uint32_t now)
 {
     poll_t p;
 
-    CHECK(pff_mixer_poll(m, now, &p.strong, &p.weak, &p.send) == PFF_OK);
+    uint16_t motors[2];
+
+    CHECK(pff_mixer_poll(m, now, motors, 2, &p.send) == PFF_OK);
+    p.strong = motors[0];
+    p.weak = motors[1];
     return p;
 }
 
@@ -380,7 +385,7 @@ static void expect_motors(pff_mixer_t *m, uint32_t now, int send, uint16_t s0, u
     uint16_t got[PFF_MOTORS];
     int sent = -1;
 
-    CHECK(pff_mixer_poll_motors(m, now, got, PFF_MOTORS, &sent) == PFF_OK);
+    CHECK(pff_mixer_poll(m, now, got, PFF_MOTORS, &sent) == PFF_OK);
     if (sent != send || got[0] != s0 || got[1] != s1 || got[2] != s2 || got[3] != s3) {
         fprintf(stderr, "t=%u: got send=%d %u/%u/%u/%u\n", (unsigned)now, sent, (unsigned)got[0],
                 (unsigned)got[1], (unsigned)got[2], (unsigned)got[3]);
@@ -395,7 +400,12 @@ static void test_triggers(void)
     pff_effect_t ramp = level(PFF_RAMP, 16384, 16384, 0);
     uint16_t two[2];
     int send;
+    pff_config_t four;
 
+    memset(&four, 0, sizeof(four));
+    four.size = sizeof(four);
+    four.motors = 4;
+    CHECK(pff_mixer_configure(m, &four) == PFF_OK);
     e.left_trigger = 30000;
     e.attack_ms = 10;
     e.attack_level = 10000;
@@ -411,12 +421,19 @@ static void test_triggers(void)
     CHECK(pff_mixer_stop(m, 1) == PFF_OK);
     e.left_trigger = 31000;
     CHECK(pff_mixer_upload(m, 0, &e, 30) == PFF_OK);
-    CHECK(pff_mixer_poll(m, 40, &two[0], &two[1], &send) == PFF_OK);
+    CHECK(pff_mixer_poll(m, 40, two, 2, &send) == PFF_OK);
     CHECK(send == 1 && two[0] == 1000 && two[1] == 0);
-    CHECK(pff_mixer_poll_motors(m, 40, two, 0, &send) == PFF_ERR_ARG);
-    CHECK(pff_mixer_poll_motors(m, 40, two, PFF_MOTORS + 1, &send) == PFF_ERR_ARG);
-    CHECK(pff_mixer_poll_motors(m, 40, NULL, 1, &send) == PFF_ERR_ARG);
-    CHECK(pff_mixer_poll_motors(NULL, 40, two, 1, &send) == PFF_ERR_ARG);
+    four.motors = 2;
+    CHECK(pff_mixer_configure(m, &four) == PFF_OK);
+    e.left_trigger = 32000;
+    CHECK(pff_mixer_upload(m, 0, &e, 50) == PFF_OK);
+    expect_motors(m, 60, 0, 1000, 0, 31000, 0);
+    four.motors = PFF_MOTORS + 1;
+    CHECK(pff_mixer_configure(m, &four) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll(m, 40, two, 0, &send) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll(m, 40, two, PFF_MOTORS + 1, &send) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll(m, 40, NULL, 1, &send) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll(NULL, 40, two, 1, &send) == PFF_ERR_ARG);
 }
 
 static void test_effect_size_24(void)
@@ -498,8 +515,7 @@ static void test_commands(void)
     pff_mixer_t *m = new_mixer();
     pff_effect_t e = rumble(100, 100, 0);
     pff_effect_t bad = rumble(100, 100, 0);
-    uint16_t s;
-    uint16_t w;
+    uint16_t sw[2];
     int send;
     uint32_t wait;
 
@@ -528,10 +544,9 @@ static void test_commands(void)
     CHECK(pff_mixer_erase(m, 2) == PFF_OK);
     CHECK(pff_mixer_play(m, 2, 1, 0) == PFF_ERR_SLOT);
     expect(m, 1, 1, 0, 0);
-    CHECK(pff_mixer_poll(NULL, 0, &s, &w, &send) == PFF_ERR_ARG);
-    CHECK(pff_mixer_poll(m, 0, NULL, &w, &send) == PFF_ERR_ARG);
-    CHECK(pff_mixer_poll(m, 0, &s, NULL, &send) == PFF_ERR_ARG);
-    CHECK(pff_mixer_poll(m, 0, &s, &w, NULL) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll(NULL, 0, sw, 2, &send) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll(m, 0, NULL, 2, &send) == PFF_ERR_ARG);
+    CHECK(pff_mixer_poll(m, 0, sw, 2, NULL) == PFF_ERR_ARG);
     CHECK(pff_mixer_next(NULL, 0, &wait) == PFF_ERR_ARG);
     CHECK(pff_mixer_next(m, 0, NULL) == PFF_ERR_ARG);
 }
