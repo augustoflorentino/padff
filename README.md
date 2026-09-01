@@ -7,8 +7,8 @@
   </picture>
 </p>
 
-Force feedback mixer: turns the vibration effects a game asks for into intensities for the two
-motors of a gamepad.
+Force feedback mixer: turns the vibration effects a game asks for into intensities for the
+motors of a gamepad: strong and weak rumble, plus the two trigger motors of Xbox gamepads.
 
 - effects: rumble (strong and weak motor), periodic, constant and ramp, the last three reduced to
   an intensity on both motors
