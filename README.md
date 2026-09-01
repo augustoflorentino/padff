@@ -64,16 +64,17 @@ commands. This README is the API reference; the header
 static unsigned char mem[PFF_MIXER_SIZE(16)];
 pff_mixer_t *mixer;
 
-pff_config_t config = {sizeof(config), PFF_MIX_MAX, 255, 0};
+pff_config_t config = {sizeof(config), PFF_MIX_MAX, 255, 0, 2};
+uint16_t motors[2];
 
 pff_mixer_init(mem, sizeof(mem), 16, &config, &mixer);
 
 pff_mixer_upload(mixer, id, &effect, now_ms);
 pff_mixer_play(mixer, id, count, now_ms);
 
-pff_mixer_poll(mixer, now_ms, &strong, &weak, &send);
+pff_mixer_poll(mixer, now_ms, motors, 2, &send);
 if (send)
-    send_to_gamepad(strong, weak);
+    send_to_gamepad(motors[0], motors[1]);
 pff_mixer_next(mixer, now_ms, &wait_ms);
 ```
 
@@ -82,10 +83,10 @@ to `wait_ms` (`PFF_NEVER`: until the next command). While an envelope or ramp is
 `wait_ms` is the time until the scaled output next changes, looking at most 64 ms ahead, so a
 slow ramp on a motor with few steps wakes the loop only when there is something to send.
 
-`pff_mixer_poll_motors` reports up to `PFF_MOTORS` (4) motors in the order
-`PFF_MOTOR_STRONG`, `PFF_MOTOR_WEAK`, `PFF_MOTOR_LEFT_TRIGGER`, `PFF_MOTOR_RIGHT_TRIGGER`;
-`pff_mixer_poll` reports the first two. Either one sends when any of the four motors changes,
-so a gamepad without trigger motors may get a send with the same strong and weak values.
+`pff_mixer_poll` writes `count` motor values (1 to `PFF_MOTORS`) in the order
+`PFF_MOTOR_STRONG`, `PFF_MOTOR_WEAK`, `PFF_MOTOR_LEFT_TRIGGER`, `PFF_MOTOR_RIGHT_TRIGGER`. It
+sends when one of the motors the config declares changes (`motors`, 2 by default); motors past
+that count always read 0, and `pff_mixer_next` ignores them.
 
 `pff_mixer_stop` stops one slot and `pff_mixer_stop_all` every slot; the effects stay uploaded.
 `pff_mixer_playing` tells whether a slot is still playing at `now_ms` (inside its delay counts
@@ -106,7 +107,8 @@ Conventions:
 - `pff_config_t` sets the mixer up, at `pff_mixer_init` or later with `pff_mixer_configure`;
   every field is checked before any is applied. `size` is `sizeof(pff_config_t)`; `mix` is
   `PFF_MIX_MAX` or `PFF_MIX_SUM`; `motor_max` is the motor scale, 1 to 65535, 0 meaning 65535;
-  `interval_ms` is the minimum time between sends, up to `INT32_MAX`. A zeroed config with its
+  `interval_ms` is the minimum time between sends, up to `INT32_MAX`; `motors` is how many
+  motors the device has, 1 to `PFF_MOTORS`, 0 meaning 2. A zeroed config with its
   size set, or `NULL` at init, gives the defaults: maximum mix, full scale, no interval
 - `pff_mixer_set_gain` changes the global gain (65535 by default), as `FF_GAIN` does
 
