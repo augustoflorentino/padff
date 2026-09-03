@@ -4,6 +4,37 @@ Each release lists what changed, what updating means for existing code, and ever
 
 ## Unreleased
 
+## 3.0.0 - 2026-09-03
+
+- breaking: `pff_mixer_poll` takes an array, `(mixer, now_ms, out_motors, count, out_send)`, and
+  `pff_mixer_poll_motors` is gone
+- breaking: `pff_config_t` gains `motors`, the number of motors the device has (1 to 4, 0 meaning
+  2); a send happens only when one of those changes, and `pff_mixer_next` ignores the others
+- why: 2.4 had two polls sharing one send state, and both sent when a trigger motor changed even
+  on a gamepad without trigger motors, so a two-motor device got repeated identical reports
+  while a trigger effect played. Declaring the motor count fixes that, and one array poll is the
+  only output path for two- and four-motor devices alike
+- SONAME is now `libpadff.so.3`
+
+Upgrading from 2.x:
+
+```c
+/* 2.x */
+uint16_t strong, weak;
+pff_mixer_poll(mixer, now_ms, &strong, &weak, &send);
+
+/* 3.0 */
+uint16_t motors[2];
+pff_mixer_poll(mixer, now_ms, motors, 2, &send);
+```
+
+- `pff_mixer_poll_motors(m, t, out, n, &send)` becomes `pff_mixer_poll(m, t, out, n, &send)`;
+  set `config.motors = 4` to keep reporting the trigger motors
+- set `config.motors` (or leave it 0 for two motors) wherever a `pff_config_t` is filled;
+  `size` now is 20
+- `pff_effect_t` is unchanged: 28 bytes, and 24-byte effects are still accepted
+- relink: the ABI changed
+
 ## 2.4.0 - 2026-08-27
 
 - added: trigger motors (Xbox impulse triggers): `left_trigger` and `right_trigger` at the end
