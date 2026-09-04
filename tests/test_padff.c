@@ -427,7 +427,13 @@ static void test_triggers(void)
     CHECK(pff_mixer_configure(m, &four) == PFF_OK);
     e.left_trigger = 32000;
     CHECK(pff_mixer_upload(m, 0, &e, 50) == PFF_OK);
-    expect_motors(m, 60, 0, 1000, 0, 31000, 0);
+    expect_motors(m, 60, 0, 1000, 0, 0, 0);
+    four.motors = 4;
+    CHECK(pff_mixer_configure(m, &four) == PFF_OK);
+    expect_motors(m, 70, 1, 1000, 0, 32000, 0);
+    four.motors = 2;
+    CHECK(pff_mixer_configure(m, &four) == PFF_OK);
+    expect_motors(m, 80, 0, 1000, 0, 0, 0);
     four.motors = PFF_MOTORS + 1;
     CHECK(pff_mixer_configure(m, &four) == PFF_ERR_ARG);
     CHECK(pff_mixer_poll(m, 40, two, 0, &send) == PFF_ERR_ARG);

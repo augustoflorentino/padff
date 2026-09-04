@@ -249,10 +249,14 @@ static int pff_config_check(const pff_config_t *c)
 
 static void pff_config_apply(pff_mixer_t *m, const pff_config_t *c)
 {
+    unsigned i;
+
     m->mix = (int)c->mix;
     m->motor_max = (uint16_t)(c->motor_max == 0 ? PFF_FULL : c->motor_max);
     m->interval = c->interval_ms;
     m->motors = c->motors == 0 ? 2u : c->motors;
+    for (i = m->motors; i < PFF_MOTORS; i++)
+        m->sent[i] = 0;
 }
 
 int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, const pff_config_t *config,
