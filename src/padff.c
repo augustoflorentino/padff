@@ -21,6 +21,7 @@ struct pff_mixer {
     int mix;
     uint16_t gain;
     uint16_t motor_max;
+    uint16_t trigger_max;
     uint16_t sent[PFF_MOTORS];
     uint8_t has_sent;
     uint32_t interval;
@@ -186,9 +187,11 @@ static uint32_t pff_mix(int mix, uint32_t acc, uint32_t value)
     return acc > value ? acc : value;
 }
 
-static uint16_t pff_quantize(const pff_mixer_t *m, uint32_t value)
+static uint16_t pff_quantize(const pff_mixer_t *m, unsigned motor, uint32_t value)
 {
-    return (uint16_t)((value * m->motor_max + PFF_FULL / 2) / PFF_FULL);
+    uint32_t max = motor >= PFF_MOTOR_LEFT_TRIGGER ? m->trigger_max : m->motor_max;
+
+    return (uint16_t)((value * max + PFF_FULL / 2) / PFF_FULL);
 }
 
 static void pff_mixer_sample(const pff_mixer_t *m, uint32_t now, pff_sample_t *out)
@@ -206,7 +209,7 @@ static void pff_mixer_sample(const pff_mixer_t *m, uint32_t now, pff_sample_t *o
         out->wait = pff_min(out->wait, one.wait);
     }
     for (k = 0; k < PFF_MOTORS; k++)
-        out->motor[k] = pff_quantize(m, out->motor[k]);
+        out->motor[k] = pff_quantize(m, k, out->motor[k]);
 }
 
 static int pff_differs(const pff_mixer_t *m, const uint32_t *a, const uint16_t *b)
@@ -236,15 +239,21 @@ static struct pff_slot *pff_get_slot(pff_mixer_t *m, unsigned slot)
     return &m->slot[slot];
 }
 
-static int pff_config_check(const pff_config_t *c)
+#define PFF_CONFIG_SIZE_3 20u
+
+static int pff_config_load(const pff_config_t *c, pff_config_t *out)
 {
-    if (c->size != sizeof(pff_config_t))
+    if (c->size != sizeof(pff_config_t) && c->size != PFF_CONFIG_SIZE_3)
         return 0;
-    if (c->mix != PFF_MIX_MAX && c->mix != PFF_MIX_SUM)
+    memset(out, 0, sizeof(*out));
+    memcpy(out, c, c->size);
+    if (out->trigger_max > PFF_FULL)
         return 0;
-    if (c->motors > PFF_MOTORS)
+    if (out->mix != PFF_MIX_MAX && out->mix != PFF_MIX_SUM)
         return 0;
-    return c->motor_max <= PFF_FULL && c->interval_ms <= INT32_MAX;
+    if (out->motors > PFF_MOTORS)
+        return 0;
+    return out->motor_max <= PFF_FULL && out->interval_ms <= INT32_MAX;
 }
 
 static void pff_config_apply(pff_mixer_t *m, const pff_config_t *c)
@@ -253,6 +262,7 @@ static void pff_config_apply(pff_mixer_t *m, const pff_config_t *c)
 
     m->mix = (int)c->mix;
     m->motor_max = (uint16_t)(c->motor_max == 0 ? PFF_FULL : c->motor_max);
+    m->trigger_max = (uint16_t)(c->trigger_max == 0 ? m->motor_max : c->trigger_max);
     m->interval = c->interval_ms;
     m->motors = c->motors == 0 ? 2u : c->motors;
     for (i = m->motors; i < PFF_MOTORS; i++)
@@ -262,6 +272,7 @@ static void pff_config_apply(pff_mixer_t *m, const pff_config_t *c)
 int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, const pff_config_t *config,
                    pff_mixer_t **out_mixer)
 {
+    pff_config_t loaded;
     uintptr_t addr = (uintptr_t)mem;
     size_t pad = (size_t)((PFF_ALIGN - addr % PFF_ALIGN) % PFF_ALIGN);
     size_t need = offsetof(struct pff_mixer, slot) + (size_t)slots * sizeof(struct pff_slot);
@@ -272,7 +283,7 @@ int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, const pff_config_t
     *out_mixer = NULL;
     if (mem == NULL || slots == 0 || slots > PFF_MAX_SLOTS)
         return PFF_ERR_ARG;
-    if (config != NULL && !pff_config_check(config))
+    if (config != NULL && !pff_config_load(config, &loaded))
         return PFF_ERR_ARG;
     if (mem_len < pad || mem_len - pad < need)
         return PFF_ERR_SPACE;
@@ -282,18 +293,21 @@ int pff_mixer_init(void *mem, size_t mem_len, unsigned slots, const pff_config_t
     m->mix = PFF_MIX_MAX;
     m->gain = PFF_FULL;
     m->motor_max = PFF_FULL;
+    m->trigger_max = PFF_FULL;
     m->motors = 2;
     if (config != NULL)
-        pff_config_apply(m, config);
+        pff_config_apply(m, &loaded);
     *out_mixer = m;
     return PFF_OK;
 }
 
 int pff_mixer_configure(pff_mixer_t *mixer, const pff_config_t *config)
 {
-    if (mixer == NULL || config == NULL || !pff_config_check(config))
+    pff_config_t loaded;
+
+    if (mixer == NULL || config == NULL || !pff_config_load(config, &loaded))
         return PFF_ERR_ARG;
-    pff_config_apply(mixer, config);
+    pff_config_apply(mixer, &loaded);
     return PFF_OK;
 }
 

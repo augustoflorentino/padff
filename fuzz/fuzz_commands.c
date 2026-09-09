@@ -49,11 +49,14 @@ static void fuzz_configure(pff_mixer_t *m, fuzz_input_t *in)
 {
     pff_config_t c;
 
-    c.size = fuzz_take(in, 1) == 0 ? 0 : sizeof(c);
+    static const uint32_t sizes[4] = {0, 20, sizeof(pff_config_t), sizeof(pff_config_t)};
+
+    c.size = sizes[fuzz_take(in, 1) % 4];
     c.mix = fuzz_take(in, 1) % 3;
     c.motor_max = fuzz_take(in, 3) % 0x10002;
     c.interval_ms = fuzz_take(in, 1) % 32;
     c.motors = fuzz_take(in, 1) % (PFF_MOTORS + 2);
+    c.trigger_max = fuzz_take(in, 3) % 0x10002;
     pff_mixer_configure(m, &c);
 }
 

@@ -31,6 +31,7 @@ static int configure(pff_mixer_t *m, uint32_t mix, uint32_t motor_max, uint32_t 
     c.motor_max = motor_max;
     c.interval_ms = interval_ms;
     c.motors = 0;
+    c.trigger_max = 0;
     return pff_mixer_configure(m, &c);
 }
 
@@ -434,6 +435,16 @@ static void test_triggers(void)
     four.motors = 2;
     CHECK(pff_mixer_configure(m, &four) == PFF_OK);
     expect_motors(m, 80, 0, 1000, 0, 0, 0);
+    four.motors = 4;
+    four.trigger_max = 255;
+    CHECK(pff_mixer_configure(m, &four) == PFF_OK);
+    expect_motors(m, 90, 1, 1000, 0, 125, 0);
+    four.size = 20;
+    four.trigger_max = 70000;
+    CHECK(pff_mixer_configure(m, &four) == PFF_OK);
+    expect_motors(m, 100, 1, 1000, 0, 32000, 0);
+    four.size = sizeof(four);
+    CHECK(pff_mixer_configure(m, &four) == PFF_ERR_ARG);
     four.motors = PFF_MOTORS + 1;
     CHECK(pff_mixer_configure(m, &four) == PFF_ERR_ARG);
     CHECK(pff_mixer_poll(m, 40, two, 0, &send) == PFF_ERR_ARG);

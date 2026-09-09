@@ -170,6 +170,7 @@ static void run(uint32_t base, int sleep)
     config.motor_max = (uint32_t)trace.scale;
     config.interval_ms = (uint32_t)trace.interval;
     config.motors = 2;
+    config.trigger_max = 0;
     pff_mixer_init(mem, sizeof(mem), TRACE_SLOTS, &config, &m);
     while (t <= trace.end) {
         uint32_t wait;

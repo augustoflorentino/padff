@@ -69,6 +69,7 @@ typedef struct pff_config {
     uint32_t motor_max;
     uint32_t interval_ms;
     uint32_t motors;
+    uint32_t trigger_max;
 } pff_config_t;
 
 typedef struct pff_mixer pff_mixer_t;
