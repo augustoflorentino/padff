@@ -4,6 +4,19 @@ Each release lists what changed, what updating means for existing code, and ever
 
 ## Unreleased
 
+## 3.6.0 - 2026-09-09
+
+- added: `trigger_max` at the end of `pff_config_t`, the scale of the trigger motors (0 means
+  the same as `motor_max`), for devices whose trigger motors take a different range than the
+  rumble motors
+- `pff_mixer_init` and `pff_mixer_configure` accept the 20-byte 3.0 config as well and read
+  only `size` bytes
+- fixed: after `pff_mixer_configure` lowered `motors`, `pff_mixer_poll` kept reporting the last
+  value sent to the dropped motors instead of 0
+
+Updating: no code changes needed. Code that fills `pff_config_t` with `size = sizeof(config)`
+must set `trigger_max` (0 keeps the 3.0 behavior).
+
 ## 3.0.0 - 2026-09-03
 
 - breaking: `pff_mixer_poll` takes an array, `(mixer, now_ms, out_motors, count, out_send)`, and
